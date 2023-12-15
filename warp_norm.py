@@ -1,4 +1,5 @@
 import sys
+sys.path.append("./face-alignment")
 import face_alignment
 from imutils import face_utils
 import cv2
@@ -51,7 +52,7 @@ def estimateHeadPose(landmarks, face_model, camera, distortion = np.array([-0.16
 
     return rvec, tvec
 
-def xnorm(input, camera_matrix, camera_distortion = np.array([-0.16321888, 0.66783406, -0.00121854, -0.00303158, -1.02159927]))
+def xnorm(input, camera_matrix, camera_distortion = np.array([-0.16321888, 0.66783406, -0.00121854, -0.00303158, -1.02159927])):
     # face detection
     predictor = dlib.shape_predictor('./shape_predictor_68_face_landmarks.dat')
     # face_detector = dlib.cnn_face_detection_model_v1('./modules/mmod_human_face_detector.dat')
