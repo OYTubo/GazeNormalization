@@ -184,9 +184,12 @@ def xtrans(img, face_model, hr, ht, cam, gc = np.array([100,100]), pixel_scale =
 
 def draw_gaze(image_in, gc_normalized, thickness=2, color=(0, 0, 255)):
     '''Draw gaze angle on given image with a given eye positions.'''
-    gaze_theta = np.arcsin((-1) * gc_normalized[1])
-    gaze_phi = np.arctan2((-1) * gc_normalized[0], (-1) * gc_normalized[2])
-    pitchyaw = np.array([gaze_theta[0], gaze_phi[0]])
+    if(gc_normalized.size == 3):    
+        gaze_theta = np.arcsin((-1) * gc_normalized[1])
+        gaze_phi = np.arctan2((-1) * gc_normalized[0], (-1) * gc_normalized[2])
+        pitchyaw = np.array([gaze_theta[0], gaze_phi[0]])
+    else:
+        pitchyaw = gc_normalized
     image_out = image_in
     (h, w) = image_in.shape[:2]
     length = np.min([h, w]) / 2.0
@@ -201,22 +204,6 @@ def draw_gaze(image_in, gc_normalized, thickness=2, color=(0, 0, 255)):
 
     return image_out
 
-
-def draw_gaze_pitchyaw(image_in, pitchyaw, thickness=2, color=(0, 0, 255)):
-    '''Draw gaze angle on given image with a given eye positions.'''
-    image_out = image_in
-    (h, w) = image_in.shape[:2]
-    length = np.min([h, w]) / 2.0
-    pos = (int(w / 2.0), int(h / 2.0))
-    if len(image_out.shape) == 2 or image_out.shape[2] == 1:  # to draw on the image, we need to convert to RGB
-        image_out = cv2.cvtColor(image_out, cv2.COLOR_GRAY2BGR)
-    dx = -length * np.sin(pitchyaw[1]) * np.cos(pitchyaw[0])
-    dy = -length * np.sin(pitchyaw[0])
-    cv2.arrowedLine(image_out, tuple(np.round(pos).astype(int)),
-                   tuple(np.round([pos[0] + dx, pos[1] + dy]).astype(int)), color,
-                   thickness, cv2.LINE_AA, tipLength=0.2)
-
-    return image_out
 
 def GazeNormalization(image, camera_matrix, camera_distortion, gc, method='xgaze'):
     if(method == 'xgaze'):
