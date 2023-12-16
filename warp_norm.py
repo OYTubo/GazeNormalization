@@ -54,7 +54,7 @@ def estimateHeadPose(landmarks, face_model, camera, distortion = np.array([-0.16
 
 def xnorm(input, camera_matrix, camera_distortion = np.array([-0.16321888, 0.66783406, -0.00121854, -0.00303158, -1.02159927])):
     # face detection
-    predictor = dlib.shape_predictor('./shape_predictor_68_face_landmarks.dat')
+    predictor = dlib.shape_predictor('./modules/shape_predictor_68_face_landmarks.dat')
     # face_detector = dlib.cnn_face_detection_model_v1('./modules/mmod_human_face_detector.dat')
     face_detector = dlib.get_frontal_face_detector()  ## this face detector is not very powerful
     detected_faces = face_detector(cv2.cvtColor(input, cv2.COLOR_BGR2RGB), 1) ## convert BGR image to RGB for dlib
@@ -70,7 +70,7 @@ def xnorm(input, camera_matrix, camera_distortion = np.array([-0.16321888, 0.667
     landmarks = np.asarray(landmarks)
     
     # load face model
-    face_model_load = np.loadtxt('face_model.txt')  # Generic face model with 3D facial landmarks
+    face_model_load = np.loadtxt('./modules/face_model.txt')  # Generic face model with 3D facial landmarks
     landmark_use = [20, 23, 26, 29, 15, 19]  # we use eye corners and nose conners
     face_model = face_model_load[landmark_use, :]
     # estimate the head pose,
@@ -102,7 +102,7 @@ def enorm(input, camera_matrix, camera_distortion = np.array([-0.16321888, 0.667
     lm = preds[0]
     lm = lm[landmark_use, :]
     # load the generic face model, which includes 6 facial landmarks: four eye corners and two mouth corners
-    face = np.loadtxt('./data-preprocessing-gaze/data/faceModelGeneric.txt')
+    face = np.loadtxt('./modules/faceModelGeneric.txt')
     num_pts = face.shape[1]
     facePts = face.T.reshape(num_pts, 3)
     # fid = cv2.FileStorage('./data-preprocessing-gaze//data/calibration/cameraCalib.xml', cv2.FileStorage_READ)
@@ -208,13 +208,13 @@ def draw_gaze(image_in, gc_normalized, thickness=2, color=(0, 0, 255)):
 def GazeNormalization(image, camera_matrix, camera_distortion, gc, method='xgaze'):
     if(method == 'xgaze'):
         hr, ht = xnorm(image, camera_matrix, camera_distortion)
-        face_model_load = np.loadtxt('face_model.txt')  # Generic face model with 3D facial landmarks
+        face_model_load = np.loadtxt('./modules/face_model.txt')  # Generic face model with 3D facial landmarks
         landmark_use = [20, 23, 26, 29, 15, 19]  # we use eye corners and nose conners
         face_model = face_model_load[landmark_use, :]
         warp_image,_,gcn,_ = xtrans(image, face_model, hr, ht, camera_matrix, gc)
     else:   
         hr, ht = enorm(image, camera_matrix, camera_distortion)
-        face = np.loadtxt('./faceModelGeneric.txt')
+        face = np.loadtxt('./modules/faceModelGeneric.txt')
         num_pts = face.shape[1]
         face_model = face.T.reshape(num_pts, 3)
         warp_image,_,gcn,_ = xtrans(image, face_model, hr, ht, camera_matrix, gc)
