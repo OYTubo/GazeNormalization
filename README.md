@@ -14,6 +14,13 @@ xtrans根据hr和ht，获取对应转换后的图像，注视坐标等参数。
 ### draw_gaze
 这个函数用于在图像上可视化注视向量，可以同时接受直角坐标系和球坐标系输入。
 
+## 相机标定
+相机标定的流程如下：
+
+1. 首先在[标定棋盘格生成网站](https://calib.io/pages/camera-calibration-pattern-generator)中生成合适的棋盘格。
+2. 将棋盘格打印，或放到清晰标准的电子屏幕中，在确保棋盘格长宽与预期相符的情况下，使用摄像头以不同角度拍摄棋盘格。
+3. 将棋盘格放于./test/cam，根据棋盘格修改demo_CamCal.py的各项参数，即可生成相机参数。
+
 ## XGaze baseline
 请先下载预训练模型并放入ckpt文件夹
 [模型下载](https://drive.google.com/file/d/1Ma6zJrECNTjo_mToZ5GKk7EF-0FS4nEC/view)

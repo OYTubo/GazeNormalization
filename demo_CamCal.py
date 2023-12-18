@@ -48,7 +48,7 @@ for fname in images:
         #cv2.waitKey(200)
         cv2.imwrite('./test/cor' + str(i) + '.jpg', img)
 cv2.destroyAllWindows()
-# %% 标定
+
 print('正在计算')
 print(u, v)
 # 标定
@@ -75,5 +75,5 @@ print("dist畸变值:\n", dist)  # 畸变系数   distortion cofficients = (k_1,
 print("rvecs旋转（向量）外参:\n", rvecs)  # 旋转向量  # 外参数
 print("tvecs平移（向量）外参:\n", tvecs)  # 平移向量  # 外参数
 newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (u, v), 0, (u, v))
-print('newcameramtx外参', newcameramtx)
+print('newcameramtx外参', )
 print("写入文件名称:", file_path)
