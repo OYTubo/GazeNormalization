@@ -1,6 +1,5 @@
 import torch
 import torch.nn.functional as F
-from torch.utils.tensorboard import SummaryWriter
 from torch.autograd import Variable
 import torch.optim as optim
 from torch.optim.lr_scheduler import StepLR
@@ -55,7 +54,7 @@ class Trainer(object):
         log_dir = './logs/' + os.path.basename(os.getcwd())
         if os.path.exists(log_dir) and os.path.isdir(log_dir):
             shutil.rmtree(log_dir)
-        self.writer = SummaryWriter(log_dir=log_dir)
+        # self.writer = SummaryWriter(log_dir=log_dir)
 
         # build model
         self.model = gaze_network()
