@@ -212,6 +212,12 @@ def GazeNormalization(image, camera_matrix, camera_distortion, gc, method='xgaze
         landmark_use = [20, 23, 26, 29, 15, 19]  # we use eye corners and nose conners
         face_model = face_model_load[landmark_use, :]
         warp_image,_,gcn,_ = xtrans(image, face_model, hr, ht, camera_matrix, gc)
+    elif(method == 'xgaze68'):
+        hr, ht = xnorm_68(image, camera_matrix, camera_distortion)
+        face_model_load = np.loadtxt('./modules/face_model.txt')  # Generic face model with 3D facial landmarks
+        landmark_use = [20, 23, 26, 29, 15, 19]  # we use eye corners and nose conners
+        face_model = face_model_load[landmark_use, :]
+        warp_image,_,gcn,_ = xtrans(image, face_model, hr, ht, camera_matrix, gc)
     else:   
         hr, ht = enorm(image, camera_matrix, camera_distortion)
         face = np.loadtxt('./modules/faceModelGeneric.txt')
