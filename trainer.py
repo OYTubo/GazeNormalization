@@ -177,7 +177,10 @@ class Trainer(object):
 
         print('Testing on ', self.num_test, ' samples')
         for i, (input_img) in enumerate(self.test_loader):
-            input_var = torch.autograd.Variable(input_img.float().cuda())
+            input_var = input_img[0].float().cuda()
+            ## why?
+            input_var = input_var[0].squeeze(0).cuda()
+            print(input_var.shape)
             pred_gaze = self.model(input_var)
             pred_gaze_all[save_index:save_index+self.batch_size, :] = pred_gaze.cpu().data.numpy()
             save_index += input_var.size(0)

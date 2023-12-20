@@ -57,18 +57,22 @@ class GazeDataset(Dataset):
                 labels.append(row)
         self.gaze_centers =[[int(i[-2]), int(i[-1])] for i in labels[1:]]
         self.transform = transform
-        ## 
+        ##
+        #camera_matrix = []
+        
         self.camera_matrix = camera_matrix
         self.camera_distortion = camera_distortion
         
+
     def __len__(self):
         return len(self.images)
 
     def __getitem__(self, idx):
         image = self.images[idx]
         image = cv2.imread(image)
-        gaze_center = torch.tensor(self.gaze_centers[idx], dtype=torch.float32)
+        gaze_center = np.array(self.gaze_centers[idx])
         if self.transform:
             image,gaze_center = warp_norm.GazeNormalization(image,default_camera_matrix, default_camera_distortion, gaze_center)
+            return image, gaze_center
 
 

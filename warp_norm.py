@@ -60,7 +60,9 @@ def xnorm(input, camera_matrix, camera_distortion = np.array([-0.16321888, 0.667
     detected_faces = face_detector(cv2.cvtColor(input, cv2.COLOR_BGR2RGB), 1) ## convert BGR image to RGB for dlib
     if len(detected_faces) == 0:
         print('warning: no detected face')
-        exit(0)
+        hr = np.zeros((1,3))
+        ht = np.zeros((1,3))
+        return hr,ht
     print('detected one face')
     shape = predictor(input, detected_faces[0]) ## only use the first detected face (assume that each input image only contains one face)
     shape = face_utils.shape_to_np(shape)
@@ -96,7 +98,9 @@ def xnorm_68(input, camera_matrix, camera_distortion = np.array([-0.16321888, 0.
     detected_faces = face_detector(cv2.cvtColor(input, cv2.COLOR_BGR2RGB), 1) ## convert BGR image to RGB for dlib
     if len(detected_faces) == 0:
         print('warning: no detected face')
-        exit(0)
+        hr = np.zeros((1,3))
+        ht = np.zeros((1,3))
+        return hr,ht
     print('detected one face')
     shape = predictor(input, detected_faces[0]) ## only use the first detected face (assume that each input image only contains one face)
     shape = face_utils.shape_to_np(shape)
@@ -163,8 +167,7 @@ def xtrans(img, face_model, hr, ht, cam, gc = np.array([100,100]), pixel_scale =
     # normalized camera parameters
     focal_norm = 960  # focal length of normalized camera
     distance_norm = 600  # normalized distance between face and camera
-    roiSize = (224, 224)  # size of cropped image
-
+    roiSize = (224, 224)  # size of cropped image    
     # compute estimated 3D positions of the landmarks
     ht = ht.reshape((3, 1))
     if(gc.size == 2):
@@ -245,10 +248,15 @@ def draw_gaze(image_in, gc_normalized, thickness=2, color=(0, 0, 255)):
 def GazeNormalization(image, camera_matrix, camera_distortion, gc, method='xgaze'):
     if(method == 'xgaze'):
         hr, ht = xnorm(image, camera_matrix, camera_distortion)
+        if(hr.all() == 0 and ht.all() == 0):
+            warp_image = np.zeros((224,224,3), dtype=np.byte)
+            gcn = np.zeros((3,1))
+            return warp_image, gcn
         face_model_load = np.loadtxt('./modules/face_model.txt')  # Generic face model with 3D facial landmarks
         landmark_use = [20, 23, 26, 29, 15, 19]  # we use eye corners and nose conners
         face_model = face_model_load[landmark_use, :]
         warp_image,_,gcn,_ = xtrans(image, face_model, hr, ht, camera_matrix, gc)
+        print(gcn)
     elif(method == 'xgaze68'):
         hr, ht = xnorm_68(image, camera_matrix, camera_distortion)
         face_model = np.loadtxt('./modules/face_model.txt')  # Generic face model with 3D facial landmarks

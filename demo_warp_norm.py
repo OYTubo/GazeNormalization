@@ -19,3 +19,4 @@ camera_matrix = fs.getNode('Camera_Matrix').mat() # camera calibration informati
 camera_distortion = fs.getNode('Distortion_Coefficients').mat()
 face_patch_gaze,gzn = warp_norm.GazeNormalization(image, camera_matrix, camera_distortion, gc = np.array([100,100]), method = 'xgaze68')
 cv2.imwrite('./test/result00.JPG', face_patch_gaze)
+print(gzn)

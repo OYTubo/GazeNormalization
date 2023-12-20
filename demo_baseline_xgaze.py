@@ -23,10 +23,10 @@ trans = transforms.Compose([
 if __name__ == '__main__':
     config, unparsed = get_config()
     config.is_train = False
-    config.batch_size = 128
+    config.batch_size = 2
     config.use_gpu = True
     config.ckpt_dir = './ckpt'
     config.pre_trained_model_path = './ckpt/epoch_24_ckpt.pth.tar'
-    test_data = data_loader.get_test_loader('/home/hgh/hghData/Datasets',batch_size=config.batch_size)
+    test_data = data_loader.get_test_loader('/home/hgh/hghData/Datasets',batch_size=config.batch_size,num_workers=0)
     xgaze = trainer.Trainer(config, test_data)
     xgaze.test()
