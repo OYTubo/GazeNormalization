@@ -1,6 +1,5 @@
 import sys
-sys.path.append("./face-alignment")
-import face_alignment
+from FaceAlignment import face_alignment
 from imutils import face_utils
 import cv2
 import dlib
