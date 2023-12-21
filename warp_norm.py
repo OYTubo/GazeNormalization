@@ -155,7 +155,7 @@ def enorm(input, camera_matrix, camera_distortion = np.array([-0.16321888, 0.667
     return hr, ht
 
     # normalization function for the face images
-def xtrans(img, face_model, hr, ht, cam, gc = np.array([100,100]), pixel_scale = np.array([0.28802082, 0.28796297])):
+def xtrans(img, face_model, hr, ht, cam, w = 1920, h = 1080, gc = np.array([100,100]), pixel_scale = np.array([0.215, 0.215])):
     '''
     img: 人脸图片
     face_model: 人脸模型,[68,2]
@@ -172,7 +172,9 @@ def xtrans(img, face_model, hr, ht, cam, gc = np.array([100,100]), pixel_scale =
     ht = ht.reshape((3, 1))
     if(gc.size == 2):
         # should change depend on the camera position
-        gc = np.array([- gc[0] + 1920/2, gc[1] - 1080])
+        x = -gc[0]+w/2
+        y = -gc[1]+h
+        gc = np.array([x, y])
         gc = gc * pixel_scale
         gc = np.r_[gc, np.array([0])]
         gc = gc.reshape((3, 1))
@@ -245,7 +247,7 @@ def draw_gaze(image_in, gc_normalized, thickness=2, color=(0, 0, 255)):
     return image_out
 
 
-def GazeNormalization(image, camera_matrix, camera_distortion, gc, method='xgaze'):
+def GazeNormalization(image, camera_matrix, camera_distortion, gc, w, h, method='xgaze'):
     if(method == 'xgaze'):
         hr, ht = xnorm(image, camera_matrix, camera_distortion)
         if(hr.all() == 0 and ht.all() == 0):
@@ -255,8 +257,7 @@ def GazeNormalization(image, camera_matrix, camera_distortion, gc, method='xgaze
         face_model_load = np.loadtxt('./modules/face_model.txt')  # Generic face model with 3D facial landmarks
         landmark_use = [20, 23, 26, 29, 15, 19]  # we use eye corners and nose conners
         face_model = face_model_load[landmark_use, :]
-        warp_image,_,gcn,_ = xtrans(image, face_model, hr, ht, camera_matrix, gc)
-        print(gcn)
+        warp_image,_,gcn,_ = xtrans(image, face_model, hr, ht, camera_matrix, w, h, gc)
     elif(method == 'xgaze68'):
         hr, ht = xnorm_68(image, camera_matrix, camera_distortion)
         face_model = np.loadtxt('./modules/face_model.txt')  # Generic face model with 3D facial landmarks
