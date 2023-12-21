@@ -17,14 +17,16 @@ trans = transforms.Compose([
     ])
 
 if __name__ == '__main__':
-    img_file_name = '/home/hgh/hghData/Datasets/Photo/2.jpg'
+    img_file_name = '/home/hgh/hghData/Datasets/Photo/118.jpg'
     print('load input face image: ', img_file_name)
     image = cv2.imread(img_file_name)
     cam_tan = '/home/hgh/hghData/Datasets/camTan.xml'  # this is camera calibration information file obtained with OpenCV
     fs_tan = cv2.FileStorage(cam_tan, cv2.FILE_STORAGE_READ)
     camera_matrix_tan = fs_tan.getNode('Camera_Matrix').mat() # camera calibration information is used for data normalization
     camera_distortion_tan = fs_tan.getNode('Distortion_Coefficients').mat()     
-    img_normalized, gcn = warp_norm.GazeNormalization(image, camera_matrix_tan, camera_distortion_tan, gc = np.array([1047,572]))
+    img_normalized, gcn = warp_norm.GazeNormalization(image, camera_matrix_tan, camera_distortion_tan,w = 1920, h = 1080, gc = np.array([1261,518]))
+    # img_file_name = '/home/hgh/hghData/Datasets/preprocessed_images/preprocessed_image_1.jpg'
+    # img_normalized = cv2.imread(img_file_name)
     print('load gaze estimator')
     model = gaze_network()
     model.cuda() # comment this line out if you are not using GPU
@@ -47,6 +49,7 @@ if __name__ == '__main__':
 
     print('prepare the output')
     # draw the facial landmarks
+    print(pred_gaze_np)
     face_patch_gaze = warp_norm.draw_gaze(img_normalized, pred_gaze_np)  # draw gaze direction on the normalized face image
     face_patch_gaze = warp_norm.draw_gaze(img_normalized, gcn, color=(0,255,0))  # draw gaze direction on the normalized face image
     output_path = './test/results_gaze.jpg'

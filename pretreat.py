@@ -8,8 +8,8 @@ import warp_norm
 
 cam_chen = '/home/hgh/hghData/Datasets/camChen.xml'  # this is camera calibration information file obtained with OpenCV
 fs_chen = cv2.FileStorage(cam_chen, cv2.FILE_STORAGE_READ)
-w_chen = 2560
-h_chen = 1600
+w_chen = 1300
+h_chen = 700
 camera_matrix_chen = fs_chen.getNode('Camera_Matrix').mat() # camera calibration information is used for data normalization
 camera_distortion_chen = fs_chen.getNode('Distortion_Coefficients').mat()
 cam_tan = '/home/hgh/hghData/Datasets/camTan.xml'  # this is camera calibration information file obtained with OpenCV

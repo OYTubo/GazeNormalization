@@ -55,8 +55,7 @@ class TestDataset(Dataset):
         image = cv2.imread(image_path)
         image = image[:, :, [2, 1, 0]]  # from BGR to RGB
 
-        # 可选：应用图像变换
         if self.transform:
             image = self.transform(image)
 
-        return image, label
+        return image_path, image, label

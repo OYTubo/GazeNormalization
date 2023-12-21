@@ -176,10 +176,9 @@ class Trainer(object):
         save_index = 0
 
         print('Testing on ', self.num_test, ' samples')
-        for i, (input_img, labels) in enumerate(self.test_loader):
+        for i, (img_path, input_img, labels) in enumerate(self.test_loader):
             input_var = input_img.float().cuda()
-            print(input_var.shape)
-            # input_var = input_var.permute(0, 3, 1, 2)
+            print(img_path)
             pred_gaze = self.model(input_var)
             pred_gaze_all[save_index:save_index+self.batch_size, :] = pred_gaze.cpu().data.numpy()
             save_index += input_var.size(0)
@@ -188,7 +187,7 @@ class Trainer(object):
             print('the test samples save_index ', save_index, ' is not equal to the whole test set ', self.num_test)
 
         print('Tested on : ', pred_gaze_all.shape[0], ' samples')
-        np.savetxt('results.txt', pred_gaze_all, delimiter=',')
+        np.savetxt('results.txt', pred_gaze_all, delimiter=' ')
 
     def save_checkpoint(self, state, add=None):
         """
