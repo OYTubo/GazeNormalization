@@ -8,7 +8,7 @@ from torchvision import transforms
 from model import gaze_network
 import warp_norm
 import pandas as pd
-
+import utils
 
 trans = transforms.Compose([
         transforms.ToPILImage(),
@@ -31,7 +31,7 @@ camera_matrix_tan = fs_tan.getNode('Camera_Matrix').mat() # camera calibration i
 camera_distortion_tan = fs_tan.getNode('Distortion_Coefficients').mat()
 
 if __name__ == '__main__':
-    image_path = './testpart/1.jpg'
+    image_path = './testpart/4.jpg'
     csv_file_path = './testpart/coordinate_test.csv'
     df = pd.read_csv(csv_file_path, index_col='ID')
     image_ID,_ = os.path.splitext(os.path.basename(image_path))
@@ -77,10 +77,32 @@ if __name__ == '__main__':
     pred_gaze_np = pred_gaze.cpu().data.numpy()  # convert the pytorch tensor to numpy array
 
     print('prepare the output')
-    # draw the facial landmarks
-    print(pred_gaze_np)
+    print('Predict normalization gaze vector(pitch yaw):', pred_gaze_np)
+    print('True normalization gaze vector(pitch yaw):', warp_norm.vector_to_pitchyaw(np.array([gcn]))[0])
+    e = utils.angular_error(np.array([pred_gaze_np]),warp_norm.vector_to_pitchyaw(np.array([gcn])))[0]
+    print('error:', e)
+
+
+    print('true vector', gcn)
+    print('pred vector', warp_norm.pitchyaw_to_vector(np.array([pred_gaze_np])))
+
+
+
+    print('Normalization true gaze point:', warp_norm.vector_to_gc(gcn.reshape((1,3))[0],w,h))
+    print('Normalization pred gaze point:', warp_norm.vector_to_gc(pred_gaze_np,w,h))
+    
+
+    # save the normalization image
     face_patch_gaze = warp_norm.draw_gaze(img_normalized, pred_gaze_np)  # draw gaze direction on the normalized face image
     face_patch_gaze = warp_norm.draw_gaze(img_normalized, gcn, color=(0,255,0))  # draw gaze direction on the normalized face image
     output_path = './test/results_gaze.jpg'
     print('save output image to: ', output_path)
     cv2.imwrite(output_path, face_patch_gaze)
+    
+    # compare the gaze point
+    print('Original Gaze Point:', gc)
+    pred_gaze = warp_norm.pitchyaw_to_vector(np.array([pred_gaze_np]))[0]
+    pred_gaze = np.dot(np.linalg.inv(R),pred_gaze)
+    pred_gaze_point = warp_norm.vector_to_gc(pred_gaze,w,h)
+    print('Predict Gaze Point:', pred_gaze_point)
+
