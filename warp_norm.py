@@ -272,7 +272,7 @@ def GazeNormalization(image, camera_matrix, camera_distortion, gc, w, h, method=
         face_model_load = np.loadtxt('./modules/face_model.txt')  # Generic face model with 3D facial landmarks
         landmark_use = [20, 23, 26, 29, 15, 19]  # we use eye corners and nose conners
         face_model = face_model_load[landmark_use, :]
-        warp_image,_,gcn,_ = xtrans(image, face_model, hr, ht, camera_matrix, w, h, gc)
+        warp_image,_,gcn,R = xtrans(image, face_model, hr, ht, camera_matrix, w, h, gc)
     elif(method == 'xgaze68'):
         hr, ht = xnorm_68(image, camera_matrix, camera_distortion)
         face_model = np.loadtxt('./modules/face_model.txt')  # Generic face model with 3D facial landmarks
@@ -283,4 +283,4 @@ def GazeNormalization(image, camera_matrix, camera_distortion, gc, w, h, method=
         num_pts = face.shape[1]
         face_model = face.T.reshape(num_pts, 3)
         warp_image,_,gcn,_ = xtrans(image, face_model, hr, ht, camera_matrix, gc)
-    return warp_image, gcn
+    return warp_image, gcn, R
