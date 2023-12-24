@@ -9,6 +9,7 @@ from model import gaze_network
 import warp_norm
 import pandas as pd
 import utils
+import time
 
 trans = transforms.Compose([
         transforms.ToPILImage(),
@@ -39,7 +40,7 @@ if __name__ == '__main__':
     # print(target_row)
     print('load input face image: ', image_ID)
 
-
+    start_time = time.time()
 
     image = cv2.imread(image_path)
 
@@ -75,7 +76,9 @@ if __name__ == '__main__':
     pred_gaze = model(input_var)  # get the output gaze direction, this is 2D output as pitch and raw rotation
     pred_gaze = pred_gaze[0] # here we assume there is only one face inside the image, then the first one is the prediction
     pred_gaze_np = pred_gaze.cpu().data.numpy()  # convert the pytorch tensor to numpy array
-
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    print(f"Elapsed Time: {elapsed_time} seconds")
     print('prepare the output')
     print('Predict normalization gaze vector(pitch yaw):', pred_gaze_np)
     print('True normalization gaze vector(pitch yaw):', warp_norm.vector_to_pitchyaw(np.array([gcn]))[0])
