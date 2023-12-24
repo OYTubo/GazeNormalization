@@ -219,15 +219,15 @@ def xtrans(img, face_model, hr, ht, cam, w = 1920, h = 1080, gc = np.array([100,
     gc_normalized = gc - face_center  # gaze vector
     gc_normalized = np.dot(R, gc_normalized) # 这里只追求旋转，所以没有与相机矩阵相乘
     gc_normalized = gc_normalized / np.linalg.norm(gc_normalized) #归一化
-
+    gc_normalized = -gc_normalized
     return img_warped, hr_norm, gc_normalized, R
 
 
 def draw_gaze(image_in, gc_normalized, thickness=2, color=(0, 0, 255)):
     '''Draw gaze angle on given image with a given eye positions.'''
     if(gc_normalized.size == 3):    
-        gaze_theta = np.arcsin((-1) * gc_normalized[1])
-        gaze_phi = np.arctan2((-1) * gc_normalized[0], (-1) * gc_normalized[2])
+        gaze_theta = np.arcsin(gc_normalized[1])
+        gaze_phi = np.arctan2(gc_normalized[0], gc_normalized[2])
         pitchyaw = np.array([gaze_theta[0], gaze_phi[0]])
     else:
         pitchyaw = gc_normalized
@@ -257,7 +257,7 @@ def vector_to_gc(gv, w, h, pixel_scale=np.array([0.215,0.215])):
     print(scale)
     gp = scale * gv - z #单位为mm
     gp = np.delete(gp, 2, axis=0)
-    org = np.array([w/2,h/2])
+    org = np.array([w/2,h])
     gp = gp/pixel_scale+org
     return gp
 
