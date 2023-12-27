@@ -5,17 +5,21 @@ import numpy as np
 import pandas as pd
 from PIL import Image
 import warp_norm
+import pickle
+
 
 cam_chen = '/home/hgh/hghData/Datasets/camChen.xml'  # this is camera calibration information file obtained with OpenCV
 fs_chen = cv2.FileStorage(cam_chen, cv2.FILE_STORAGE_READ)
 w_chen = 1300
 h_chen = 700
+pixel_scale_chen = 0.223427
 camera_matrix_chen = fs_chen.getNode('Camera_Matrix').mat() # camera calibration information is used for data normalization
 camera_distortion_chen = fs_chen.getNode('Distortion_Coefficients').mat()
 cam_tan = '/home/hgh/hghData/Datasets/camTan.xml'  # this is camera calibration information file obtained with OpenCV
 fs_tan = cv2.FileStorage(cam_tan, cv2.FILE_STORAGE_READ)
 w_tan = 1920
 h_tan = 1080
+pixel_scale_tan = 0.211667
 camera_matrix_tan = fs_tan.getNode('Camera_Matrix').mat() # camera calibration information is used for data normalization
 camera_distortion_tan = fs_tan.getNode('Distortion_Coefficients').mat()
 def get_camera(path):
@@ -23,9 +27,9 @@ def get_camera(path):
     number = ''.join(filter(str.isdigit, name))
     number = int((int(number) - 1)/100)
     if(number % 2 == 0):
-        return camera_matrix_tan, camera_distortion_tan, w_tan, h_tan
+        return camera_matrix_tan, camera_distortion_tan, w_tan, h_tan, pixel_scale_tan
     else:
-        return camera_matrix_chen, camera_distortion_chen, w_chen, h_chen
+        return camera_matrix_chen, camera_distortion_chen, w_chen, h_chen, pixel_scale_chen
 
 
 # 图像文件所在的文件夹路径
@@ -50,23 +54,31 @@ gaze_centers =[[int(i[-2]), int(i[-1])] for i in load_labels[1:]]
 # 遍历图像文件夹
 for filename in sorted(os.listdir(image_folder_path), key=lambda x: int(os.path.splitext(x)[0])):
     if filename.endswith(".jpg"):
+        if filename == '103.jpg' or filename == '119.jpg' or filename == '198.jpg':
+            continue
         # 构建图像文件的完整路径
         image_path = os.path.join(image_folder_path, filename)
         print(image_path)
         label = np.array(gaze_centers[int(''.join(filter(str.isdigit, filename))) - 1])
         print(label)
-        camera_matrix,camera_distortion,w,h = get_camera(image_path)
+        camera_matrix,camera_distortion,w,h,pixel_scale = get_camera(image_path)
         # 读取图像
         image = cv2.imread(image_path)
         print(h)
-        image,gaze_center = warp_norm.GazeNormalization(image,camera_matrix,camera_distortion,label,w,h)
+        image,gaze_center,R = warp_norm.GazeNormalization(image,camera_matrix,camera_distortion,label,w,h,pixel_scale)
         if(image.all() == 0):
             continue
         # 保存预处理后的图像
         save_path = os.path.join(save_dir, f'preprocessed_image_{filename}')
         cv2.imwrite(save_path, image)
         # 添加到数据集列表
-        dataset.append({'image_path': save_path, 'label': gaze_center})
+        dataset.append({'image_path': f'preprocessed_image_{filename}', 'label': gaze_center, 'R': R
+        })
+
+
+pickle_file_path = '/home/hgh/hghData/Datasets/dataset_dict.pkl'
+with open(pickle_file_path, 'wb') as file:
+    pickle.dump(dataset, file)
 
 # 保存标签为CSV
 csv_file_path = '/home/hgh/hghData/Datasets/preprocessed_labels.csv'

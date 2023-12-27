@@ -32,7 +32,7 @@ camera_matrix_tan = fs_tan.getNode('Camera_Matrix').mat() # camera calibration i
 camera_distortion_tan = fs_tan.getNode('Distortion_Coefficients').mat()
 
 if __name__ == '__main__':
-    image_path = './testpart/1.jpg'
+    image_path = './testpart/7.jpg'
     csv_file_path = './testpart/coordinate_test.csv'
     df = pd.read_csv(csv_file_path, index_col='ID')
     image_ID,_ = os.path.splitext(os.path.basename(image_path))
@@ -56,7 +56,7 @@ if __name__ == '__main__':
         w = w_chen
         h = h_chen
     gc = np.array([int(target_row['x']),int(target_row['y'])])
-    img_normalized, gcn = warp_norm.GazeNormalization(image, camera_matrix, camera_distortion,gc, w, h)
+    img_normalized, gcn, R = warp_norm.GazeNormalization(image, camera_matrix, camera_distortion,gc, w, h, pixel_scale = 0.211667)
     print('load gaze estimator')
     model = gaze_network()
     model.cuda()

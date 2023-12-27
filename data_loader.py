@@ -34,14 +34,15 @@ def get_test_loader(data_dir,
                            num_workers=0):
     # load dataset
     print('load the test file list from: ', data_dir)
-    test_set = TestDataset(data_dir)
+    test_set = TestDataset(data_dir,'/home/hgh/hghData/Datasets/preprocessed_images')
     test_loader = DataLoader(test_set, batch_size=batch_size, num_workers=num_workers, shuffle=False)
     return test_loader
 
 
 class TestDataset(Dataset):
-    def __init__(self, csv_file_path, transform=None):
+    def __init__(self, csv_file_path, data_path, transform=None):
         self.data = pd.read_csv(csv_file_path)
+        self.data_path = data_path
         self.transform = trans
 
     def __len__(self):
@@ -49,6 +50,7 @@ class TestDataset(Dataset):
 
     def __getitem__(self, idx):
         image_path = self.data.loc[idx, 'image_path']
+        image_path = os.path.join(self.data_path, image_path)
         label = self.data.loc[idx, 'label']
 
         # 读取图像
