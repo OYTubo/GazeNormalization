@@ -22,17 +22,19 @@ cam_chen = './testpart/camChen.xml'  # this is camera calibration information fi
 fs_chen = cv2.FileStorage(cam_chen, cv2.FILE_STORAGE_READ)
 w_chen = 1300
 h_chen = 700
+pixel_scale_chen = 0.223427
 camera_matrix_chen = fs_chen.getNode('Camera_Matrix').mat() # camera calibration information is used for data normalization
 camera_distortion_chen = fs_chen.getNode('Distortion_Coefficients').mat()
 cam_tan = './testpart/camTan.xml'  # this is camera calibration information file obtained with OpenCV
 fs_tan = cv2.FileStorage(cam_tan, cv2.FILE_STORAGE_READ)
 w_tan = 1920
 h_tan = 1080
+pixel_scale_tan = 0.211667
 camera_matrix_tan = fs_tan.getNode('Camera_Matrix').mat() # camera calibration information is used for data normalization
 camera_distortion_tan = fs_tan.getNode('Distortion_Coefficients').mat()
 
 if __name__ == '__main__':
-    image_path = './testpart/7.jpg'
+    image_path = './testpart/202.jpg'
     csv_file_path = './testpart/coordinate_test.csv'
     df = pd.read_csv(csv_file_path, index_col='ID')
     image_ID,_ = os.path.splitext(os.path.basename(image_path))
@@ -98,7 +100,7 @@ if __name__ == '__main__':
     # save the normalization image
     face_patch_gaze = warp_norm.draw_gaze(img_normalized, pred_gaze_np)  # draw gaze direction on the normalized face image
     face_patch_gaze = warp_norm.draw_gaze(img_normalized, gcn, color=(0,255,0))  # draw gaze direction on the normalized face image
-    output_path = './test/results_gaze.jpg'
+    output_path = './test/results_gaze_new.jpg'
     print('save output image to: ', output_path)
     cv2.imwrite(output_path, face_patch_gaze)
     
@@ -106,5 +108,5 @@ if __name__ == '__main__':
     print('Original Gaze Point:', gc)
     pred_gaze = warp_norm.pitchyaw_to_vector(np.array([pred_gaze_np]))[0]
     pred_gaze = np.dot(np.linalg.inv(R),pred_gaze)
-    pred_gaze_point = warp_norm.vector_to_gc(pred_gaze,w,h)
+    pred_gaze_point = warp_norm.vector_to_gc(pred_gaze,w,h,pixel_scale_tan)
     print('Predict Gaze Point:', pred_gaze_point)

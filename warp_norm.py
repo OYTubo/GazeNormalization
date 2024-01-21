@@ -1,5 +1,6 @@
 import sys
-from FaceAlignment import face_alignment
+sys.path.append("./FaceAlignment")
+import face_alignment
 from imutils import face_utils
 import cv2
 import dlib
@@ -113,7 +114,7 @@ def xnorm_68(input, camera_matrix, camera_distortion = np.array([-0.16321888, 0.
     landmarks_sub = landmarks_sub.astype(float)  # input to solvePnP function must be float type
     landmarks_sub = landmarks_sub.reshape(50, 1, 2)  # input to solvePnP requires such shape
     # load face model
-    face_model_load = np.loadtxt('./modules/face_model.txt')  # Generic face model with 3D facial landmarks
+    face_model_load = np.loadtxt('./modules/face_model.txt')  # Generic face model with 3D facisal landmarks
     # landmark_use = [20, 23, 26, 29, 15, 19]  # we use eye corners and nose conners
     face_model = face_model_load
     # estimate the head pose,
@@ -154,10 +155,10 @@ def enorm(input, camera_matrix, camera_distortion = np.array([-0.16321888, 0.667
     return hr, ht
 
     # normalization function for the face images
-def xtrans(img, face_model, hr, ht, cam, pixel_scale, w = 1920, h = 1080, gc = np.array([100,100])):
+def xtrans(img, face_model, hr, ht, cam, pixel_scale, w = 1920, h = 1080, gc = np.array([100,100,0])):
     '''
     img: 人脸图片
-    face_model: 人脸模型,[68,2]
+    face_model: 人脸模型,[68,3]
     hr: 来自annotation, 旋转向量, [3,1]
     ht: 来自annotation, 平移向量, [3,1]
     cam: Camera_Matrix
@@ -170,23 +171,34 @@ def xtrans(img, face_model, hr, ht, cam, pixel_scale, w = 1920, h = 1080, gc = n
     roiSize = (224, 224)  # size of cropped image    
     # compute estimated 3D positions of the landmarks
     ht = ht.reshape((3, 1))
+    # 将二维人脸（原图）套入三维模型
+    hR = cv2.Rodrigues(hr)[0]  # rotation matrix, [3,3]
     if(gc.size == 2):
         # should change depend on the camera position
-        x = -gc[0]+w/2
-        # y = -gc[1]+h
+        # x = gc[0] - w/2
+        # y = - gc[1]
+        # gc = np.array([x, y])
+        # gc = gc * pixel_scale
+        # gc = np.r_[gc, np.array([0])]
+        # gc = gc.reshape((3, 1))
+        camera_position = -np.dot(hR,ht)
+        print('camera_position',camera_position)
+        # 相对位置
+        x = gc[0] - w/2
         y = gc[1]
         gc = np.array([x, y])
         gc = gc * pixel_scale
         gc = np.r_[gc, np.array([0])]
         gc = gc.reshape((3, 1))
-    # 将二维人脸（原图）套入三维模型
-    hR = cv2.Rodrigues(hr)[0]  # rotation matrix, [3,3]
-    Fc = np.dot(hR, face_model.T) + ht # [3,50]
+        # 绝对位置(世界坐标系)
+        gc = gc + camera_position
+
+    Fc = np.dot(hR, face_model.T) + ht # [3,50]世界坐标系
     # 取得人脸中心
     # two_eye_center = np.mean(Fc[:, 0:4], axis=1).reshape((3, 1))
     # mouth_center = np.mean(Fc[:, 4:6], axis=1).reshape((3, 1))
     face_center = np.mean(Fc,axis=1).reshape((3, 1))
-
+    print('face_center',face_center)
     # normalize image
     distance = np.linalg.norm(face_center)  # actual distance between and original camera
     z_scale = distance_norm / distance
@@ -221,7 +233,8 @@ def xtrans(img, face_model, hr, ht, cam, pixel_scale, w = 1920, h = 1080, gc = n
     gc_normalized = gc - face_center  # gaze vector
     gc_normalized = np.dot(R, gc_normalized) # 这里只追求旋转，所以没有与相机矩阵相乘
     gc_normalized = gc_normalized / np.linalg.norm(gc_normalized) #归一化
-    gc_normalized = -gc_normalized
+    ## erro??
+    gc_normalized[2] = -gc_normalized[2]
     return img_warped, hr_norm, gc_normalized, R
 
 
@@ -247,21 +260,23 @@ def draw_gaze(image_in, gc_normalized, thickness=2, color=(0, 0, 255)):
 
     return image_out
 
-def vector_to_gc(gv, w, h, pixel_scale):
-    '''实现向量和屏幕注视点的转换'''
-    pixel_scale = np.array([pixel_scale,pixel_scale]) 
-    ## 首先将vector转换为直角坐标系
+def vector_to_gc(gv, pixel_scale):
+    '''实现向量和屏幕注视点的转换，转换的结果为相对于摄像头原点的坐标'''
+    if pixel_scale.shape[0] == 1:
+        pixel_scale = np.array([pixel_scale,pixel_scale]) 
+    # 首先将vector转换为直角坐标系
     if gv.size == 2:
         gv = pitchyaw_to_vector(gv)
+    # 坐标系方向转换至与屏幕坐标系一致(反转y轴)
+    gv[1] = -gv[1] 
     z = np.array([0,0,-600])
     theta = np.arcsin(np.linalg.norm(np.cross(gv,z))/(np.linalg.norm(gv)*np.linalg.norm(z)))
-    print(theta)
+    # print(theta)
     scale = np.linalg.norm(z)/(np.cos(theta)*np.linalg.norm(gv))
-    print(scale)
+    # print(scale)
     gp = scale * gv - z #单位为mm
     gp = np.delete(gp, 2, axis=0)
-    org = np.array([w/2,h])
-    gp = gp/pixel_scale+org
+    gp = gp/pixel_scale
     return gp
 
 
