@@ -13,6 +13,7 @@ import numpy as np
 from utils import AverageMeter, angular_error
 from model import gaze_network
 import shutil
+import pickle
 
 class Trainer(object):
     def __init__(self, config, data_loader):
@@ -174,19 +175,28 @@ class Trainer(object):
         pred_gaze_all = np.zeros((self.num_test, 2))
         mean_error = []
         save_index = 0
+        label = np.zeros((self.num_test, 2))
+        file_name = []
 
         print('Testing on ', self.num_test, ' samples')
         for i, (img_path, input_img, labels) in enumerate(self.test_loader):
             input_var = input_img.float().cuda()
             print(img_path)
+            file_name.append(img_path)
             pred_gaze = self.model(input_var)
             pred_gaze_all[save_index:save_index+self.batch_size, :] = pred_gaze.cpu().data.numpy()
+            label[save_index:save_index+self.batch_size, :] = labels
             save_index += input_var.size(0)
 
         if save_index != self.num_test:
             print('the test samples save_index ', save_index, ' is not equal to the whole test set ', self.num_test)
 
         print('Tested on : ', pred_gaze_all.shape[0], ' samples')
+        label = np.array(label)
+        print(label)
+        tinydict = {'file_name': file_name, 'pred_gaze': pred_gaze_all, 'label': label}
+        with open('./gaze_pred.pkl', 'wb') as fo:
+            pickle.dump(tinydict,fo)
         np.savetxt('results.txt', pred_gaze_all, delimiter=' ')
 
     def save_checkpoint(self, state, add=None):

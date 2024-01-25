@@ -11,7 +11,7 @@ import csv
 import warp_norm
 import cv2
 import pandas as pd
-
+import pickle
 
 trans_train = transforms.Compose([
         transforms.ToPILImage(),
@@ -42,6 +42,8 @@ def get_test_loader(data_dir,
 class TestDataset(Dataset):
     def __init__(self, csv_file_path, data_path, transform=None):
         self.data = pd.read_csv(csv_file_path)
+        with open('./gaze_pred.pkl', 'rb') as fo:
+            self.data2 = pickle.load(fo, encoding='bytes')
         self.data_path = data_path
         self.transform = trans
 
@@ -51,7 +53,12 @@ class TestDataset(Dataset):
     def __getitem__(self, idx):
         image_path = self.data.loc[idx, 'image_path']
         image_path = os.path.join(self.data_path, image_path)
-        label = self.data.loc[idx, 'label']
+        label = self.data.loc[idx, 'original_label']
+        
+        # 去掉字符串中的括号，并使用空格分割成数字字符串列表
+        label = label.strip('[]').split()
+        label = [int(num) for num in label]
+        label = np.array(label)
 
         # 读取图像
         image = cv2.imread(image_path)

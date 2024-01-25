@@ -60,6 +60,7 @@ for filename in sorted(os.listdir(image_folder_path), key=lambda x: int(os.path.
         image_path = os.path.join(image_folder_path, filename)
         print(image_path)
         label = np.array(gaze_centers[int(''.join(filter(str.isdigit, filename))) - 1])
+        
         print(label)
         camera_matrix,camera_distortion,w,h,pixel_scale = get_camera(image_path)
         # 读取图像
@@ -72,8 +73,8 @@ for filename in sorted(os.listdir(image_folder_path), key=lambda x: int(os.path.
         save_path = os.path.join(save_dir, f'preprocessed_image_{filename}')
         cv2.imwrite(save_path, image)
         # 添加到数据集列表
-        dataset.append({'image_path': f'preprocessed_image_{filename}', 'label': gaze_center, 'R': R
-        })
+
+        dataset.append({'image_path': f'preprocessed_image_{filename}', 'original_label': label, 'R': R})
 
 
 pickle_file_path = '/home/hgh/hghData/Datasets/dataset_dict.pkl'

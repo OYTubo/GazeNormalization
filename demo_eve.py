@@ -68,13 +68,19 @@ pred_norm = []
 pred = []
 idx = 0
 ret = True
-while ret:
+while True:
     ret,image = cap.read()
+    if ret == False:
+        break
     hr, ht = warp_norm.xnorm(image, camera_matrix)
     if(hr.all() == 0 and ht.all() == 0):
         warp_image = np.zeros((224,224,3), dtype=np.byte)
         gcn = np.zeros((3,1))
         R = np.zeros((3,3))
+        pred_gaze_np = [0,0]
+        pred_norm.append(pred_gaze_np)
+        pred.append(np.dot(np.linalg.inv(R),warp_norm.pitchyaw_to_vector(np.array([pred_gaze_np])).T))
+        continue
     face_model_load = np.loadtxt('./modules/face_model.txt')  # Generic face model with 3D facial landmarks
     landmark_use = [20, 23, 26, 29, 15, 19]  # we use eye corners and nose conners
     face_model = face_model_load[landmark_use, :]
@@ -93,11 +99,12 @@ while ret:
     pred.append(np.dot(np.linalg.inv(R),warp_norm.pitchyaw_to_vector(np.array([pred_gaze_np])).T))
     print('Ground truth gaze vector:', gazen[0])
     idx += 1
+cap.release()
 pred = np.array(pred)
 pred_norm = np.array(pred_norm)
 print(pred_norm)
 label_norm = gazen
 print(label_norm)
 tinydict = {'pred_norm': pred_norm, 'pred': pred}
-with open('./eve_val01_pred_part.pkl', 'wb') as fo:
+with open('./eve_val01_pred.pkl', 'wb') as fo:
     pickle.dump(tinydict,fo)
