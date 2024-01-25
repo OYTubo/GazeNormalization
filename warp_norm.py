@@ -69,7 +69,10 @@ def xnorm(input, camera_matrix, camera_distortion = np.array([-0.16321888, 0.667
     for (x, y) in shape:
         landmarks.append((x, y))
     landmarks = np.asarray(landmarks)
-    
+    Ear = []
+    for i in range(2):
+        Ear.append((np.linalg.norm(landmarks[41+6*i]-landmarks[37+6*i],2) + np.linalg.norm(landmarks[40+6*i]-landmarks[38+6*i],2))/(2*np.linalg.norm(landmarks[36+6*i]-landmarks[39+6*i],2)))
+    Ear = np.mean(np.asarray(Ear))
     # load face model
     face_model_load = np.loadtxt('./modules/face_model.txt')  # Generic face model with 3D facial landmarks
     landmark_use = [20, 23, 26, 29, 15, 19]  # we use eye corners and nose conners
@@ -87,7 +90,7 @@ def xnorm(input, camera_matrix, camera_distortion = np.array([-0.16321888, 0.667
     landmarks_sub = landmarks_sub.astype(float)  # input to solvePnP function must be float type
     landmarks_sub = landmarks_sub.reshape(6, 1, 2)  # input to solvePnP requires such shape
     hr, ht = estimateHeadPose(landmarks_sub, facePts, camera_matrix, camera_distortion)
-    return hr,ht
+    return hr,ht,Ear
 
 def xnorm_68(input, camera_matrix, camera_distortion = np.array([-0.16321888, 0.66783406, -0.00121854, -0.00303158, -1.02159927])):
     # face detection
@@ -261,9 +264,11 @@ def vector_to_gc(gv, w, h, pixel_scale=np.array([0.215,0.215])):
     return gp
 
 
+
+
 def GazeNormalization(image, camera_matrix, camera_distortion, gc, w, h, method='xgaze'):
     if(method == 'xgaze'):
-        hr, ht = xnorm(image, camera_matrix, camera_distortion)
+        hr, ht, Ear = xnorm(image, camera_matrix, camera_distortion)
         if(hr.all() == 0 and ht.all() == 0):
             warp_image = np.zeros((224,224,3), dtype=np.byte)
             gcn = np.zeros((3,1))
@@ -282,4 +287,4 @@ def GazeNormalization(image, camera_matrix, camera_distortion, gc, w, h, method=
         num_pts = face.shape[1]
         face_model = face.T.reshape(num_pts, 3)
         warp_image,_,gcn,_ = xtrans(image, face_model, hr, ht, camera_matrix, gc)
-    return warp_image, gcn, R
+    return warp_image, gcn, R, Ear

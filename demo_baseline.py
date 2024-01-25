@@ -56,7 +56,9 @@ if __name__ == '__main__':
         w = w_chen
         h = h_chen
     gc = np.array([int(target_row['x']),int(target_row['y'])])
-    img_normalized, gcn, R = warp_norm.GazeNormalization(image, camera_matrix, camera_distortion,gc, w, h)
+    img_normalized, gcn, R, Ear = warp_norm.GazeNormalization(image, camera_matrix, camera_distortion,gc, w, h)
+    print('Ear:{}'.format(Ear))
+
     print('load gaze estimator')
     model = gaze_network()
 
