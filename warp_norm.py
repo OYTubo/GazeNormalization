@@ -262,8 +262,6 @@ def draw_gaze(image_in, gc_normalized, thickness=2, color=(0, 0, 255)):
 
 def vector_to_gc(gv, pixel_scale):
     '''实现向量和屏幕注视点的转换，转换的结果为相对于摄像头原点的坐标'''
-    if pixel_scale.shape[0] == 1:
-        pixel_scale = np.array([pixel_scale,pixel_scale]) 
     # 首先将vector转换为直角坐标系
     if gv.size == 2:
         gv = pitchyaw_to_vector(gv)
