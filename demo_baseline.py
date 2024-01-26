@@ -40,6 +40,20 @@ if __name__ == '__main__':
     # print(target_row)
     print('load input face image: ', image_ID)
 
+    print('load gaze estimator')
+    pre_trained_model_path = './ckpt/epoch_24_ckpt.pth.tar'
+    if not os.path.isfile(pre_trained_model_path):
+        print('the pre-trained gaze estimation model does not exist.')
+        exit(0)
+    else:
+        print('load the pre-trained model: ', pre_trained_model_path)
+    ckpt = torch.load(pre_trained_model_path, map_location=torch.device('cpu'))
+    model = gaze_network()
+    model.load_state_dict(ckpt['model_state'], strict=True)  # load the pre-trained model
+    model.eval()  # change it to the evaluation mode
+    print('load face detector')
+    predictor, face_detector = warp_norm.xmodel()
+    
     start_time = time.time()
 
     image = cv2.imread(image_path)
@@ -56,21 +70,12 @@ if __name__ == '__main__':
         w = w_chen
         h = h_chen
     gc = np.array([int(target_row['x']),int(target_row['y'])])
-    img_normalized, gcn, R, Ear = warp_norm.GazeNormalization(image, camera_matrix, camera_distortion,gc, w, h)
+
+
+    img_normalized, gcn, R, Ear = warp_norm.GazeNormalization(image, camera_matrix, camera_distortion,gc, w, h,predictor,face_detector)
     print('Ear:{}'.format(Ear))
 
-    print('load gaze estimator')
-    model = gaze_network()
 
-    pre_trained_model_path = './ckpt/epoch_24_ckpt.pth.tar'
-    if not os.path.isfile(pre_trained_model_path):
-        print('the pre-trained gaze estimation model does not exist.')
-        exit(0)
-    else:
-        print('load the pre-trained model: ', pre_trained_model_path)
-    ckpt = torch.load(pre_trained_model_path, map_location=torch.device('cpu'))
-    model.load_state_dict(ckpt['model_state'], strict=True)  # load the pre-trained model
-    model.eval()  # change it to the evaluation mode
     input_var = img_normalized[:, :, [2, 1, 0]]  # from BGR to RGB
     input_var = trans(input_var)
     input_var = torch.autograd.Variable(input_var.float())
@@ -78,6 +83,7 @@ if __name__ == '__main__':
     pred_gaze = model(input_var)  # get the output gaze direction, this is 2D output as pitch and raw rotation
     pred_gaze = pred_gaze[0] # here we assume there is only one face inside the image, then the first one is the prediction
     pred_gaze_np = pred_gaze.cpu().data.numpy()  # convert the pytorch tensor to numpy array
+
     end_time = time.time()
     elapsed_time = end_time - start_time
     print(f"Elapsed Time: {elapsed_time} seconds")

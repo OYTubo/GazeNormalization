@@ -51,11 +51,16 @@ def estimateHeadPose(landmarks, face_model, camera, distortion = np.array([-0.16
 
     return rvec, tvec
 
-def xnorm(input, camera_matrix, camera_distortion = np.array([-0.16321888, 0.66783406, -0.00121854, -0.00303158, -1.02159927])):
-    # face detection
+def xmodel():
+    '''预读取模型'''
     predictor = dlib.shape_predictor('./modules/shape_predictor_68_face_landmarks.dat')
-    # face_detector = dlib.cnn_face_detection_model_v1('./modules/mmod_human_face_detector.dat')
-    face_detector = dlib.get_frontal_face_detector()  ## this face detector is not very powerful
+    face_detector = dlib.get_frontal_face_detector()
+    return predictor, face_detector
+
+def xnorm(input, camera_matrix, camera_distortion = np.array([-0.16321888, 0.66783406, -0.00121854, -0.00303158, -1.02159927]), 
+          predictor = dlib.shape_predictor('./modules/shape_predictor_68_face_landmarks.dat'),
+          face_detector = dlib.get_frontal_face_detector()):
+    # face detection
     detected_faces = face_detector(cv2.cvtColor(input, cv2.COLOR_BGR2RGB), 1) ## convert BGR image to RGB for dlib
     if len(detected_faces) == 0:
         print('warning: no detected face')
@@ -92,11 +97,10 @@ def xnorm(input, camera_matrix, camera_distortion = np.array([-0.16321888, 0.667
     hr, ht = estimateHeadPose(landmarks_sub, facePts, camera_matrix, camera_distortion)
     return hr,ht,Ear
 
-def xnorm_68(input, camera_matrix, camera_distortion = np.array([-0.16321888, 0.66783406, -0.00121854, -0.00303158, -1.02159927])):
+def xnorm_68(input, camera_matrix, camera_distortion = np.array([-0.16321888, 0.66783406, -0.00121854, -0.00303158, -1.02159927]), 
+          predictor = dlib.shape_predictor('./modules/shape_predictor_68_face_landmarks.dat'),
+          face_detector = dlib.get_frontal_face_detector()):
     # face detection
-    predictor = dlib.shape_predictor('./modules/shape_predictor_68_face_landmarks.dat')
-    # face_detector = dlib.cnn_face_detection_model_v1('./modules/mmod_human_face_detector.dat')
-    face_detector = dlib.get_frontal_face_detector()  ## this face detector is not very powerful
     detected_faces = face_detector(cv2.cvtColor(input, cv2.COLOR_BGR2RGB), 1) ## convert BGR image to RGB for dlib
     if len(detected_faces) == 0:
         print('warning: no detected face')
@@ -263,12 +267,9 @@ def vector_to_gc(gv, w, h, pixel_scale=np.array([0.215,0.215])):
     gp = gp + org
     return gp
 
-
-
-
-def GazeNormalization(image, camera_matrix, camera_distortion, gc, w, h, method='xgaze'):
+def GazeNormalization(image, camera_matrix, camera_distortion, gc, w, h, predictor, face_detector, method='xgaze'):
     if(method == 'xgaze'):
-        hr, ht, Ear = xnorm(image, camera_matrix, camera_distortion)
+        hr, ht, Ear = xnorm(image, camera_matrix, camera_distortion, predictor, face_detector)
         if(hr.all() == 0 and ht.all() == 0):
             warp_image = np.zeros((224,224,3), dtype=np.byte)
             gcn = np.zeros((3,1))
@@ -278,7 +279,7 @@ def GazeNormalization(image, camera_matrix, camera_distortion, gc, w, h, method=
         face_model = face_model_load[landmark_use, :]
         warp_image,_,gcn,R = xtrans(image, face_model, hr, ht, camera_matrix, w, h, gc)
     elif(method == 'xgaze68'):
-        hr, ht = xnorm_68(image, camera_matrix, camera_distortion)
+        hr, ht = xnorm_68(image, camera_matrix, camera_distortion, predictor, face_detector)
         face_model = np.loadtxt('./modules/face_model.txt')  # Generic face model with 3D facial landmarks
         warp_image,_,gcn,_ = xtrans(image, face_model, hr, ht, camera_matrix, gc)
     else:   
