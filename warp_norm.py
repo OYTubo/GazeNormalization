@@ -64,7 +64,13 @@ def xnorm(input, camera_matrix, camera_distortion = np.array([-0.16321888, 0.667
         ht = np.zeros((1,3))
         return hr,ht
     print('detected one face')
-    shape = predictor(input, detected_faces[0]) ## only use the first detected face (assume that each input image only contains one face)
+
+    largest_face = max(detected_faces, key=lambda rect: rect.width() * rect.height())
+    print("max face position:", largest_face)
+
+    # shape = predictor(input, detected_faces[idx])
+    shape = predictor(input, largest_face)
+
     shape = face_utils.shape_to_np(shape)
     landmarks = []
     for (x, y) in shape:
