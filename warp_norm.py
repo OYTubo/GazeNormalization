@@ -279,6 +279,22 @@ def vector_to_gc(gv, pixel_scale, face_center = -600):
     gp = gp/pixel_scale
     return gp
 
+def angular_error(a, b):
+    """Calculate angular error (via cosine similarity)."""
+    a = pitchyaw_to_vector(a) if a.shape[1] == 2 else a
+    b = pitchyaw_to_vector(b) if b.shape[1] == 2 else b
+
+    ab = np.sum(np.multiply(a, b), axis=1)
+    a_norm = np.linalg.norm(a, axis=1)
+    b_norm = np.linalg.norm(b, axis=1)
+
+    # Avoid zero-values (to avoid NaNs)
+    a_norm = np.clip(a_norm, a_min=1e-7, a_max=None)
+    b_norm = np.clip(b_norm, a_min=1e-7, a_max=None)
+
+    similarity = np.divide(ab, np.multiply(a_norm, b_norm))
+
+    return np.arccos(similarity) * 180.0 / np.pi
 
 def GazeNormalization(image, camera_matrix, camera_distortion, gc, w, h, pixel_scale, method='xgaze'):
     if(method == 'xgaze'):

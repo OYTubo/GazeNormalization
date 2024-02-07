@@ -8,7 +8,6 @@ from torchvision import transforms
 from model import gaze_network
 import warp_norm
 import pandas as pd
-import utils
 import time
 
 trans = transforms.Compose([
@@ -84,7 +83,7 @@ if __name__ == '__main__':
     print('prepare the output')
     print('Predict normalization gaze vector(pitch yaw):', pred_gaze_np)
     print('True normalization gaze vector(pitch yaw):', warp_norm.vector_to_pitchyaw(np.array([gcn]))[0])
-    e = utils.angular_error(np.array([pred_gaze_np]),warp_norm.vector_to_pitchyaw(np.array([gcn])))[0]
+    e = warp_norm.angular_error(np.array([pred_gaze_np]),warp_norm.vector_to_pitchyaw(np.array([gcn])))[0]
     print('error:', e)
 
 
