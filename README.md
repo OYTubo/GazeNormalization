@@ -34,4 +34,4 @@ xtrans根据hr和ht，获取对应转换后的图像，注视坐标等参数。
 测试请参考demo_baseline_xgaze和demo_baseline_onetest。在demo_baseline_xgaze中，我将预测结果，旋转矩阵等需要使用的数据保存至gaze_pred.pkl中，result.txt只保存了预测结果。
 
 ## 数据分析（TIP）
-接下来，读取数据，并使用文章中的做法进行分析，分析流程参考analyze.ipynb。目前已经完成Validity Module*(不需要使用)*和Self-Calibration Module。
+接下来，读取数据，并使用文章中的做法进行分析，分析流程参考analyze.ipynb。目前已经完成Validity Module（*不需要使用*）和Self-Calibration Module。
