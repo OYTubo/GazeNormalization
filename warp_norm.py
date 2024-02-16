@@ -1,6 +1,5 @@
 import sys
-sys.path.append("./FaceAlignment")
-import face_alignment
+from FaceAlignment import face_alignment
 from imutils import face_utils
 import cv2
 import dlib
@@ -52,11 +51,16 @@ def estimateHeadPose(landmarks, face_model, camera, distortion = np.array([-0.16
 
     return rvec, tvec
 
-def xnorm(input, camera_matrix, camera_distortion = np.array([-0.16321888, 0.66783406, -0.00121854, -0.00303158, -1.02159927])):
-    # face detection
+def xmodel():
+    '''预读取模型'''
     predictor = dlib.shape_predictor('./modules/shape_predictor_68_face_landmarks.dat')
-    # face_detector = dlib.cnn_face_detection_model_v1('./modules/mmod_human_face_detector.dat')
-    face_detector = dlib.get_frontal_face_detector()  ## this face detector is not very powerful
+    face_detector = dlib.get_frontal_face_detector()
+    return predictor, face_detector
+
+def xnorm(input, camera_matrix, camera_distortion = np.array([-0.16321888, 0.66783406, -0.00121854, -0.00303158, -1.02159927]), 
+          predictor = dlib.shape_predictor('./modules/shape_predictor_68_face_landmarks.dat'),
+          face_detector = dlib.get_frontal_face_detector()):
+    # face detection
     detected_faces = face_detector(cv2.cvtColor(input, cv2.COLOR_BGR2RGB), 1) ## convert BGR image to RGB for dlib
     if len(detected_faces) == 0:
         print('warning: no detected face')
@@ -64,19 +68,16 @@ def xnorm(input, camera_matrix, camera_distortion = np.array([-0.16321888, 0.667
         ht = np.zeros((1,3))
         return hr,ht
     print('detected one face')
-
-    largest_face = max(detected_faces, key=lambda rect: rect.width() * rect.height())
-    print("max face position:", largest_face)
-
-    # shape = predictor(input, detected_faces[idx])
-    shape = predictor(input, largest_face)
-
+    shape = predictor(input, detected_faces[0]) ## only use the first detected face (assume that each input image only contains one face)
     shape = face_utils.shape_to_np(shape)
     landmarks = []
     for (x, y) in shape:
         landmarks.append((x, y))
     landmarks = np.asarray(landmarks)
-    
+    Ear = []
+    for i in range(2):
+        Ear.append((np.linalg.norm(landmarks[41+6*i]-landmarks[37+6*i],2) + np.linalg.norm(landmarks[40+6*i]-landmarks[38+6*i],2))/(2*np.linalg.norm(landmarks[36+6*i]-landmarks[39+6*i],2)))
+    Ear = np.mean(np.asarray(Ear))
     # load face model
     face_model_load = np.loadtxt('./modules/face_model.txt')  # Generic face model with 3D facial landmarks
     landmark_use = [20, 23, 26, 29, 15, 19]  # we use eye corners and nose conners
@@ -94,13 +95,12 @@ def xnorm(input, camera_matrix, camera_distortion = np.array([-0.16321888, 0.667
     landmarks_sub = landmarks_sub.astype(float)  # input to solvePnP function must be float type
     landmarks_sub = landmarks_sub.reshape(6, 1, 2)  # input to solvePnP requires such shape
     hr, ht = estimateHeadPose(landmarks_sub, facePts, camera_matrix, camera_distortion)
-    return hr,ht
+    return hr,ht,Ear
 
-def xnorm_68(input, camera_matrix, camera_distortion = np.array([-0.16321888, 0.66783406, -0.00121854, -0.00303158, -1.02159927])):
+def xnorm_68(input, camera_matrix, camera_distortion = np.array([-0.16321888, 0.66783406, -0.00121854, -0.00303158, -1.02159927]), 
+          predictor = dlib.shape_predictor('./modules/shape_predictor_68_face_landmarks.dat'),
+          face_detector = dlib.get_frontal_face_detector()):
     # face detection
-    predictor = dlib.shape_predictor('./modules/shape_predictor_68_face_landmarks.dat')
-    # face_detector = dlib.cnn_face_detection_model_v1('./modules/mmod_human_face_detector.dat')
-    face_detector = dlib.get_frontal_face_detector()  ## this face detector is not very powerful
     detected_faces = face_detector(cv2.cvtColor(input, cv2.COLOR_BGR2RGB), 1) ## convert BGR image to RGB for dlib
     if len(detected_faces) == 0:
         print('warning: no detected face')
@@ -120,7 +120,7 @@ def xnorm_68(input, camera_matrix, camera_distortion = np.array([-0.16321888, 0.
     landmarks_sub = landmarks_sub.astype(float)  # input to solvePnP function must be float type
     landmarks_sub = landmarks_sub.reshape(50, 1, 2)  # input to solvePnP requires such shape
     # load face model
-    face_model_load = np.loadtxt('./modules/face_model.txt')  # Generic face model with 3D facisal landmarks
+    face_model_load = np.loadtxt('./modules/face_model.txt')  # Generic face model with 3D facial landmarks
     # landmark_use = [20, 23, 26, 29, 15, 19]  # we use eye corners and nose conners
     face_model = face_model_load
     # estimate the head pose,
@@ -161,50 +161,37 @@ def enorm(input, camera_matrix, camera_distortion = np.array([-0.16321888, 0.667
     return hr, ht
 
     # normalization function for the face images
-def xtrans(img, face_model, hr, ht, cam, pixel_scale, w = 1920, h = 1080, gc = np.array([100,100,0])):
+def xtrans(img, face_model, hr, ht, cam, w = 1920, h = 1080, gc = np.array([100,100]), pixel_scale = np.array([0.215, 0.215])):
     '''
     img: 人脸图片
-    face_model: 人脸模型,[68,3]
+    face_model: 人脸模型,[68,2]
     hr: 来自annotation, 旋转向量, [3,1]
     ht: 来自annotation, 平移向量, [3,1]
     cam: Camera_Matrix
     gc: 来自annotation, gaze point on the screen coordinate system, [2,1]
     '''
     # normalized camera parameters
-    pixel_scale = np.array([pixel_scale,pixel_scale])
     focal_norm = 960  # focal length of normalized camera
     distance_norm = 600  # normalized distance between face and camera
     roiSize = (224, 224)  # size of cropped image    
     # compute estimated 3D positions of the landmarks
     ht = ht.reshape((3, 1))
-    # 将二维人脸（原图）套入三维模型
-    hR = cv2.Rodrigues(hr)[0]  # rotation matrix, [3,3]
     if(gc.size == 2):
         # should change depend on the camera position
-        # x = gc[0] - w/2
-        # y = - gc[1]
-        # gc = np.array([x, y])
-        # gc = gc * pixel_scale
-        # gc = np.r_[gc, np.array([0])]
-        # gc = gc.reshape((3, 1))
-        camera_position = -np.dot(hR,ht)
-        print('camera_position',camera_position)
-        # 相对位置
-        x = gc[0] - w/2
-        y = gc[1]
+        x = -gc[0]+w/2
+        y = -gc[1]+h
         gc = np.array([x, y])
         gc = gc * pixel_scale
         gc = np.r_[gc, np.array([0])]
         gc = gc.reshape((3, 1))
-        # 绝对位置(世界坐标系)
-        gc = gc + camera_position
-
-    Fc = np.dot(hR, face_model.T) + ht # [3,50]世界坐标系
+    # 将二维人脸（原图）套入三维模型
+    hR = cv2.Rodrigues(hr)[0]  # rotation matrix, [3,3]
+    Fc = np.dot(hR, face_model.T) + ht # [3,50]
     # 取得人脸中心
     # two_eye_center = np.mean(Fc[:, 0:4], axis=1).reshape((3, 1))
     # mouth_center = np.mean(Fc[:, 4:6], axis=1).reshape((3, 1))
     face_center = np.mean(Fc,axis=1).reshape((3, 1))
-    print('face_center',face_center)
+
     # normalize image
     distance = np.linalg.norm(face_center)  # actual distance between and original camera
     z_scale = distance_norm / distance
@@ -239,17 +226,14 @@ def xtrans(img, face_model, hr, ht, cam, pixel_scale, w = 1920, h = 1080, gc = n
     gc_normalized = gc - face_center  # gaze vector
     gc_normalized = np.dot(R, gc_normalized) # 这里只追求旋转，所以没有与相机矩阵相乘
     gc_normalized = gc_normalized / np.linalg.norm(gc_normalized) #归一化
-    ## erro??
-    gc_normalized[2] = -gc_normalized[2]
+    gc_normalized = -gc_normalized
     return img_warped, hr_norm, gc_normalized, R
 
 
 def draw_gaze(image_in, gc_normalized, thickness=2, color=(0, 0, 255)):
     '''Draw gaze angle on given image with a given eye positions.'''
     if(gc_normalized.size == 3):    
-        gaze_theta = np.arcsin(gc_normalized[1])
-        gaze_phi = np.arctan2(gc_normalized[0], gc_normalized[2])
-        pitchyaw = np.array([gaze_theta[0], gaze_phi[0]])
+        pitchyaw = vector_to_pitchyaw(np.array([gc_normalized]))[0]
     else:
         pitchyaw = gc_normalized
     image_out = image_in
@@ -266,17 +250,21 @@ def draw_gaze(image_in, gc_normalized, thickness=2, color=(0, 0, 255)):
 
     return image_out
 
-def vector_to_gc(gv, pixel_scale, face_center = -600):
-    '''实现向量和屏幕注视点的转换，转换的结果为相对于摄像头原点的坐标'''
-    # gv为直角坐标系注视向量
-    # 坐标系方向转换至与屏幕坐标系一致(反转y轴)
-    gv[1] = -gv[1] 
-    z = np.array([0,0, face_center])
+def vector_to_gc(gv, w, h, pixel_scale=np.array([0.215,0.215])):
+    '''实现向量和屏幕注视点的转换'''
+    ## 首先将vector转换为直角坐标系
+    if gv.size == 2:
+        gv = pitchyaw_to_vector(np.array([gv]))[0]
+    z = np.array([0,0,-600])
     theta = np.arcsin(np.linalg.norm(np.cross(gv,z))/(np.linalg.norm(gv)*np.linalg.norm(z)))
+    # print(theta)
     scale = np.linalg.norm(z)/(np.cos(theta)*np.linalg.norm(gv))
+    # print(scale)
     gp = scale * gv - z #单位为mm
     gp = np.delete(gp, 2, axis=0)
+    org = np.array([w/2,h])
     gp = gp/pixel_scale
+    gp = gp + org
     return gp
 
 def angular_error(a, b):
@@ -296,24 +284,26 @@ def angular_error(a, b):
 
     return np.arccos(similarity) * 180.0 / np.pi
 
-def GazeNormalization(image, camera_matrix, camera_distortion, gc, w, h, pixel_scale, method='xgaze'):
+
+def GazeNormalization(image, camera_matrix, camera_distortion, gc, w, h, predictor, face_detector, method='xgaze'):
     if(method == 'xgaze'):
-        hr, ht = xnorm(image, camera_matrix, camera_distortion)
+        hr, ht, Ear = xnorm(image, camera_matrix, camera_distortion, predictor, face_detector)
         if(hr.all() == 0 and ht.all() == 0):
             warp_image = np.zeros((224,224,3), dtype=np.byte)
             gcn = np.zeros((3,1))
-            R = np.zeros((3,3))
-            return warp_image, gcn, R
+            return warp_image, gcn
         face_model_load = np.loadtxt('./modules/face_model.txt')  # Generic face model with 3D facial landmarks
         landmark_use = [20, 23, 26, 29, 15, 19]  # we use eye corners and nose conners
         face_model = face_model_load[landmark_use, :]
+        warp_image,_,gcn,R = xtrans(image, face_model, hr, ht, camera_matrix, w, h, gc)
     elif(method == 'xgaze68'):
-        hr, ht = xnorm_68(image, camera_matrix, camera_distortion)
+        hr, ht = xnorm_68(image, camera_matrix, camera_distortion, predictor, face_detector)
         face_model = np.loadtxt('./modules/face_model.txt')  # Generic face model with 3D facial landmarks
+        warp_image,_,gcn,_ = xtrans(image, face_model, hr, ht, camera_matrix, gc)
     else:   
         hr, ht = enorm(image, camera_matrix, camera_distortion)
         face = np.loadtxt('./modules/faceModelGeneric.txt')
         num_pts = face.shape[1]
         face_model = face.T.reshape(num_pts, 3)
-    warp_image,_,gcn,R = xtrans(image, face_model, hr, ht, camera_matrix, pixel_scale, w, h, gc)
-    return warp_image, gcn, R
+        warp_image,_,gcn,_ = xtrans(image, face_model, hr, ht, camera_matrix, gc)
+    return warp_image, gcn, R, Ear
