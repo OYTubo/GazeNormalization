@@ -258,21 +258,17 @@ def draw_gaze(image_in, gc_normalized, thickness=2, color=(0, 0, 255)):
 
     return image_out
 
-def vector_to_gc(gv, w, h, pixel_scale=np.array([0.215,0.215])):
-    '''实现向量和屏幕注视点的转换'''
-    ## 首先将vector转换为直角坐标系
-    if gv.size == 2:
-        gv = pitchyaw_to_vector(np.array([gv]))[0]
-    z = np.array([0,0,-600])
+def vector_to_gc(gv, pixel_scale, face_center = -600):
+    '''实现向量和屏幕注视点的转换，转换的结果为相对于摄像头原点的坐标'''
+    # gv为直角坐标系注视向量
+    # 坐标系方向转换至与屏幕坐标系一致(反转y轴)
+    gv[1] = -gv[1] 
+    z = np.array([0,0, face_center])
     theta = np.arcsin(np.linalg.norm(np.cross(gv,z))/(np.linalg.norm(gv)*np.linalg.norm(z)))
-    # print(theta)
     scale = np.linalg.norm(z)/(np.cos(theta)*np.linalg.norm(gv))
-    # print(scale)
     gp = scale * gv - z #单位为mm
     gp = np.delete(gp, 2, axis=0)
-    org = np.array([w/2,h])
     gp = gp/pixel_scale
-    gp = gp + org
     return gp
 
 def angular_error(a, b):
