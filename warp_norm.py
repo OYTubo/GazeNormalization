@@ -94,7 +94,6 @@ def xnorm(input, camera_matrix, camera_distortion = np.array([-0.16321888, 0.667
         lm = lm.astype(np.float32)
         lm = lm.reshape(num_pts, 1, 2)
         hr, ht = estimateHeadPose(lm, facePts, camera_matrix, camera_distortion)  
-        
         # Ear未完成，占位
         Ear = -1  
         return hr, ht, Ear
@@ -256,7 +255,7 @@ def xtrans(img, face_model, hr, ht, cam, w = 1920, h = 1080, gc = np.array([100,
     right /= np.linalg.norm(right)
     #
     forward *= 0.7
-    
+
     R = np.c_[right, down, forward].T  # rotation matrix R
 
     W = np.dot(np.dot(cam_norm, S), np.dot(R, np.linalg.inv(cam)))  # transformation matrix
