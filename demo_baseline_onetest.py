@@ -57,7 +57,8 @@ if __name__ == '__main__':
         w = w_chen
         h = h_chen
     gc = np.array([int(target_row['x']),int(target_row['y'])])
-    img_normalized, gcn, R = warp_norm.GazeNormalization(image, camera_matrix, camera_distortion,gc, w, h, pixel_scale = 0.211667)
+    model1,model2,model3 = warp_norm.xmodel()
+    img_normalized, gcn, R, Ear = warp_norm.GazeNormalization(image, camera_matrix, camera_distortion,gc, w, h,predictor=model1,face_detector=model2, eve_detector= model3)
     print('load gaze estimator')
     model = gaze_network()
     model.cuda()

@@ -1,5 +1,6 @@
 import sys
-from FaceAlignment import face_alignment
+sys.path.append("./FaceAlignment")
+import face_alignment
 from imutils import face_utils
 import cv2
 import dlib
@@ -55,18 +56,48 @@ def xmodel():
     '''预读取模型'''
     predictor = dlib.shape_predictor('./modules/shape_predictor_68_face_landmarks.dat')
     face_detector = dlib.get_frontal_face_detector()
-    return predictor, face_detector
+    fa = face_alignment.FaceAlignment(face_alignment.LandmarksType.TWO_D, flip_input=False)
+    return predictor, face_detector, fa
+
+# 工具
+def calculate_face_area(face):
+    min_x, max_x = np.min(face[0]), np.max(face[0])
+    min_y, max_y = np.min(face[1]), np.max(face[1])
+    area = (max_x - min_x) * (max_y - min_y)
+    return area
 
 def xnorm(input, camera_matrix, camera_distortion = np.array([-0.16321888, 0.66783406, -0.00121854, -0.00303158, -1.02159927]), 
           predictor = dlib.shape_predictor('./modules/shape_predictor_68_face_landmarks.dat'),
-          face_detector = dlib.get_frontal_face_detector()):
+          face_detector = dlib.get_frontal_face_detector(),
+          eve_detector = face_alignment.FaceAlignment(face_alignment.LandmarksType.TWO_D, flip_input=False)):
     # face detection
     detected_faces = face_detector(cv2.cvtColor(input, cv2.COLOR_BGR2RGB), 1) ## convert BGR image to RGB for dlib
     if len(detected_faces) == 0:
-        print('warning: no detected face')
-        hr = np.zeros((1,3))
-        ht = np.zeros((1,3))
-        return hr,ht
+        # 采用下个方式
+        preds = eve_detector.get_landmarks(input)
+        if len(preds) == 0:
+            print('warning: no detected face')
+            hr = np.zeros((1,3))
+            ht = np.zeros((1,3))
+            return hr,ht
+        # 左右眼角和嘴角
+        landmark_use = [36,39,42,45,48,54]
+        max_face_index = np.argmax(np.apply_along_axis(calculate_face_area, axis=1, arr=preds))
+        lm = preds[max_face_index]
+        lm = lm[landmark_use, :]
+        face = np.loadtxt('./modules/faceModelGeneric.txt')
+        num_pts = face.shape[1]
+        facePts = face.T.reshape(num_pts, 3)
+        # fid = cv2.FileStorage('./data-preprocessing-gaze//data/calibration/cameraCalib.xml', cv2.FileStorage_READ)
+        # camera_matrix = fid.getNode("camera_matrix").mat()
+        # camera_distortion = fid.getNode("cam_distortion").mat()
+        lm = lm.astype(np.float32)
+        lm = lm.reshape(num_pts, 1, 2)
+        hr, ht = estimateHeadPose(lm, facePts, camera_matrix, camera_distortion)  
+        
+        # Ear未完成，占位
+        Ear = -1  
+        return hr, ht, Ear
     print('detected one face')
 
     largest_face = max(detected_faces, key=lambda rect: rect.width() * rect.height())
@@ -154,6 +185,9 @@ def enorm(input, camera_matrix, camera_distortion = np.array([-0.16321888, 0.667
     preds = fa.get_landmarks(input)
     # 选取指定的6个点(左右眼角，嘴角)
     landmark_use = [36,39,42,45,48,54]
+    if len(preds) == 0:
+        print('detect no face')
+    print('detected one face')
     lm = preds[0]
     lm = lm[landmark_use, :]
     # load the generic face model, which includes 6 facial landmarks: four eye corners and two mouth corners
@@ -220,6 +254,9 @@ def xtrans(img, face_model, hr, ht, cam, w = 1920, h = 1080, gc = np.array([100,
     down /= np.linalg.norm(down)
     right = np.cross(down, forward)
     right /= np.linalg.norm(right)
+    #
+    forward *= 0.7
+    
     R = np.c_[right, down, forward].T  # rotation matrix R
 
     W = np.dot(np.dot(cam_norm, S), np.dot(R, np.linalg.inv(cam)))  # transformation matrix
@@ -231,6 +268,7 @@ def xtrans(img, face_model, hr, ht, cam, w = 1920, h = 1080, gc = np.array([100,
     hr_norm = cv2.Rodrigues(hR_norm)[0]  # convert rotation matrix to rotation vectors
 
     # normalize gaze vector
+    # 以下已废弃
     gc_normalized = gc - face_center  # gaze vector
     gc_normalized = np.dot(R, gc_normalized) # 这里只追求旋转，所以没有与相机矩阵相乘
     gc_normalized = gc_normalized / np.linalg.norm(gc_normalized) #归一化
@@ -289,9 +327,9 @@ def angular_error(a, b):
     return np.arccos(similarity) * 180.0 / np.pi
 
 
-def GazeNormalization(image, camera_matrix, camera_distortion, gc, w, h, predictor, face_detector, method='xgaze'):
+def GazeNormalization(image, camera_matrix, camera_distortion, gc, w, h, predictor, face_detector = 'None', eve_detector = 'None', method='xgaze'):
     if(method == 'xgaze'):
-        hr, ht, Ear = xnorm(image, camera_matrix, camera_distortion, predictor, face_detector)
+        hr, ht, Ear = xnorm(image, camera_matrix, camera_distortion, predictor, face_detector,eve_detector)
         if(hr.all() == 0 and ht.all() == 0):
             warp_image = np.zeros((224,224,3), dtype=np.byte)
             gcn = np.zeros((3,1))
@@ -304,10 +342,12 @@ def GazeNormalization(image, camera_matrix, camera_distortion, gc, w, h, predict
         hr, ht = xnorm_68(image, camera_matrix, camera_distortion, predictor, face_detector)
         face_model = np.loadtxt('./modules/face_model.txt')  # Generic face model with 3D facial landmarks
         warp_image,_,gcn,_ = xtrans(image, face_model, hr, ht, camera_matrix, gc)
-    else:   
+    else:
+        Ear = 1   
         hr, ht = enorm(image, camera_matrix, camera_distortion)
         face = np.loadtxt('./modules/faceModelGeneric.txt')
         num_pts = face.shape[1]
         face_model = face.T.reshape(num_pts, 3)
-        warp_image,_,gcn,_ = xtrans(image, face_model, hr, ht, camera_matrix, gc)
+        warp_image,_,gcn,R = xtrans(image, face_model, hr, ht, camera_matrix, w, h, gc)
     return warp_image, gcn, R, Ear
+

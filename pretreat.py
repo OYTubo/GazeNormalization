@@ -33,10 +33,10 @@ def get_camera(path):
 
 
 # 图像文件所在的文件夹路径
-image_folder_path = '/home/hgh/hghData/Datasets/Photo'
+image_folder_path = '/home/hgh/hghData/Datasets2/Photo'
 
 # 预处理后的数据存储路径
-save_dir = '/home/hgh/hghData/Datasets/preprocessed_images'
+save_dir = '/home/hgh/hghData/Datasets2/preprocessed_images'
 os.makedirs(save_dir, exist_ok=True)
 
 # 数据集列表
@@ -44,18 +44,16 @@ dataset = []
 
 # 标签列表
 load_labels = []
-with open(os.path.join('/home/hgh/hghData/Datasets', 'coordinate_test.txt'), 'r') as f:
+with open(os.path.join('/home/hgh/hghData/Datasets2', 'coordinate_test.txt'), 'r') as f:
     reader = csv.reader(f, delimiter=',')
     for row in reader:
         load_labels.append(row)
-gaze_centers =[[int(i[-2]), int(i[-1])] for i in load_labels[1:]]
+gaze_centers =[[int(i[-2]), int(i[-1])] for i in load_labels[:]]
 
 
 # 遍历图像文件夹
 for filename in sorted(os.listdir(image_folder_path), key=lambda x: int(os.path.splitext(x)[0])):
     if filename.endswith(".jpg"):
-        if filename == '103.jpg' or filename == '119.jpg' or filename == '198.jpg':
-            continue
         # 构建图像文件的完整路径
         image_path = os.path.join(image_folder_path, filename)
         print(image_path)
@@ -66,7 +64,8 @@ for filename in sorted(os.listdir(image_folder_path), key=lambda x: int(os.path.
         # 读取图像
         image = cv2.imread(image_path)
         print(h)
-        image,gaze_center,R = warp_norm.GazeNormalization(image,camera_matrix,camera_distortion,label,w,h,pixel_scale)
+        model1, model2, model3 = warp_norm.xmodel()
+        image,gaze_center,R, Ear = warp_norm.GazeNormalization(image,camera_matrix,camera_distortion,label,w,h,predictor=model1, face_detector=model2,eve_detector=model3)
         if(image.all() == 0):
             continue
         # 保存预处理后的图像
@@ -77,12 +76,12 @@ for filename in sorted(os.listdir(image_folder_path), key=lambda x: int(os.path.
         dataset.append({'image_path': f'preprocessed_image_{filename}', 'original_label': label, 'R': R})
 
 
-pickle_file_path = '/home/hgh/hghData/Datasets/dataset_dict.pkl'
+pickle_file_path = '/home/hgh/hghData/Datasets/dataset_dict_eve.pkl'
 with open(pickle_file_path, 'wb') as file:
     pickle.dump(dataset, file)
 
 # 保存标签为CSV
-csv_file_path = '/home/hgh/hghData/Datasets/preprocessed_labels.csv'
+csv_file_path = '/home/hgh/hghData/Datasets/preprocessed_labels_eve.csv'
 df = pd.DataFrame(dataset)
 df.to_csv(csv_file_path, index=False)
 

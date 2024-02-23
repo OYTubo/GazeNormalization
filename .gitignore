@@ -9,3 +9,4 @@ eve_val01_pred_part.pkl
 eve_val01_pred.pkl
 gaze_pred.pkl
 gaze_pred copy.pkl 
+ckpt/spatical_transform_model_fake_eyetracking_dataset_1kg_128_72_error00_valid_random_ii_in_sequence_person_gt_lr_0.1_99_full.pt
