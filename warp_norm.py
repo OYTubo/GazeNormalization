@@ -253,8 +253,7 @@ def xtrans(img, face_model, hr, ht, cam, w = 1920, h = 1080, gc = np.array([100,
     down /= np.linalg.norm(down)
     right = np.cross(down, forward)
     right /= np.linalg.norm(right)
-    #
-    forward *= 0.7
+    # forward *= 0.7
 
     R = np.c_[right, down, forward].T  # rotation matrix R
 
