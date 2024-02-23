@@ -50,7 +50,7 @@ with open(os.path.join('/home/hgh/hghData/Datasets2', 'coordinate_test.txt'), 'r
         load_labels.append(row)
 gaze_centers =[[int(i[-2]), int(i[-1])] for i in load_labels[:]]
 
-
+model1, model2, model3 = warp_norm.xmodel()
 # 遍历图像文件夹
 for filename in sorted(os.listdir(image_folder_path), key=lambda x: int(os.path.splitext(x)[0])):
     if filename.endswith(".jpg"):
@@ -58,13 +58,11 @@ for filename in sorted(os.listdir(image_folder_path), key=lambda x: int(os.path.
         image_path = os.path.join(image_folder_path, filename)
         print(image_path)
         label = np.array(gaze_centers[int(''.join(filter(str.isdigit, filename))) - 1])
-        
         print(label)
         camera_matrix,camera_distortion,w,h,pixel_scale = get_camera(image_path)
         # 读取图像
         image = cv2.imread(image_path)
         print(h)
-        model1, model2, model3 = warp_norm.xmodel()
         image,gaze_center,R, Ear = warp_norm.GazeNormalization(image,camera_matrix,camera_distortion,label,w,h,predictor=model1, face_detector=model2,eve_detector=model3)
         if(image.all() == 0):
             continue
