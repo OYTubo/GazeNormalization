@@ -19,6 +19,6 @@ if __name__ == '__main__':
     config.use_gpu = True
     config.ckpt_dir = './ckpt'
     config.pre_trained_model_path = './ckpt/epoch_24_ckpt.pth.tar'
-    test_data = data_loader.get_test_loader('/home/hgh/hghData/Datasets/preprocessed_labels.csv',batch_size=config.batch_size,num_workers=0)
+    test_data = data_loader.get_test_loader('/home/hgh/hghData/Datasets/preprocessed_labels_eve.csv',batch_size=config.batch_size,num_workers=0)
     xgaze = trainer.Trainer(config, test_data)
     xgaze.test()

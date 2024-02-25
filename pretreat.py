@@ -79,7 +79,7 @@ with open(pickle_file_path, 'wb') as file:
     pickle.dump(dataset, file)
 
 # 保存标签为CSV
-csv_file_path = '/home/hgh/hghData/Datasets/preprocessed_labels_eve.csv'
+csv_file_path = '/home/hgh/hghData/Datasets/preprocessed_labels_eve'
 df = pd.DataFrame(dataset)
 df.to_csv(csv_file_path, index=False)
 

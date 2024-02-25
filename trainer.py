@@ -9,8 +9,7 @@ import math
 import os
 import time
 import numpy as np
-
-from utils import AverageMeter, angular_error
+from warp_norm import AverageMeter, angular_error
 from model import gaze_network
 import shutil
 import pickle
@@ -62,8 +61,15 @@ class Trainer(object):
         if self.use_gpu:
             self.model.cuda()
         if self.use_gpu and torch.cuda.device_count() > 1:
-            print("Let's use", torch.cuda.device_count(), "GPUs!")
+            # print("Let's use", torch.cuda.device_count(), "GPUs!")
             # self.model = nn.DataParallel(self.model)
+            num_gpus = torch.cuda.device_count()
+            print(f"发现 {num_gpus} 个可用的GPU")
+            gpu_index = 2
+            torch.cuda.set_device(gpu_index)
+            current_gpu = torch.cuda.current_device()
+            print(f"当前使用的GPU: {current_gpu}")
+            self.model.cuda(device = torch.device("cuda"))
 
         print('[*] Number of model parameters: {:,}'.format(
             sum([p.data.nelement() for p in self.model.parameters()])))
@@ -195,7 +201,7 @@ class Trainer(object):
         label = np.array(label)
         print(label)
         tinydict = {'file_name': file_name, 'pred_gaze': pred_gaze_all, 'label': label}
-        with open('./gaze_pred.pkl', 'wb') as fo:
+        with open('./gaze_pred_new.pkl', 'wb') as fo:
             pickle.dump(tinydict,fo)
         np.savetxt('results.txt', pred_gaze_all, delimiter=' ')
 

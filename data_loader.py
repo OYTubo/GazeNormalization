@@ -34,7 +34,7 @@ def get_test_loader(data_dir,
                            num_workers=0):
     # load dataset
     print('load the test file list from: ', data_dir)
-    test_set = TestDataset(data_dir,'/home/hgh/hghData/Datasets/preprocessed_images')
+    test_set = TestDataset(data_dir,'/home/hgh/hghData/Datasets2/preprocessed_images')
     test_loader = DataLoader(test_set, batch_size=batch_size, num_workers=num_workers, shuffle=False)
     return test_loader
 
