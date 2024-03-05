@@ -188,7 +188,7 @@ def enorm(input, camera_matrix, camera_distortion = np.array([-0.16321888, 0.667
     # 左右眼角和嘴角
     landmark_use = [36,39,42,45,48,54]
     max_face_index = np.argmax(np.apply_along_axis(calculate_face_area, axis=1, arr=preds))
-    lm = preds[max_face_index]
+    landmarks = preds[max_face_index]
     lm = lm[landmark_use, :]
     face = np.loadtxt('./modules/faceModelGeneric.txt')
     num_pts = face.shape[1]
@@ -200,7 +200,10 @@ def enorm(input, camera_matrix, camera_distortion = np.array([-0.16321888, 0.667
     lm = lm.reshape(num_pts, 1, 2)
     hr, ht = estimateHeadPose(lm, facePts, camera_matrix, camera_distortion)  
     # Ear未完成，占位
-    Ear = -1  
+    Ear = []
+    for i in range(2):
+        Ear.append((np.linalg.norm(landmarks[41+6*i]-landmarks[37+6*i],2) + np.linalg.norm(landmarks[40+6*i]-landmarks[38+6*i],2))/(2*np.linalg.norm(landmarks[36+6*i]-landmarks[39+6*i],2)))
+    Ear = np.mean(np.asarray(Ear))
     return hr, ht, Ear
 
     # normalization function for the face images
