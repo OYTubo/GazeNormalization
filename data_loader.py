@@ -29,37 +29,32 @@ trans = transforms.Compose([
 
 
 
-def get_test_loader(data_dir,
-                           batch_size,
-                           num_workers=0):
+def get_test_loader(datalist, dataset, datapath,
+                    batch_size,
+                    num_workers=0):
     # load dataset
-    print('load the test file list from: ', data_dir)
-    test_set = TestDataset(data_dir,'/home/hgh/hghData/Datasets2/preprocessed_images')
+    print('load the test file list from: ', datalist)
+    test_set = TestDataset(datalist,dataset,datapath)
     test_loader = DataLoader(test_set, batch_size=batch_size, num_workers=num_workers, shuffle=False)
     return test_loader
 
 
 class TestDataset(Dataset):
-    def __init__(self, csv_file_path, data_path, transform=None):
-        self.data = pd.read_csv(csv_file_path)
-        with open('./gaze_pred.pkl', 'rb') as fo:
+    def __init__(self, datalist, dataset, datapath, transform=None):
+        self.data = pd.read_csv(datalist)
+        with open(dataset, 'rb') as fo:
             self.data2 = pickle.load(fo, encoding='bytes')
-        self.data_path = data_path
+        self.data_path = datapath
         self.transform = trans
 
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, idx):
-        image_path = self.data.loc[idx, 'image_path']
+        image_data = self.data.iloc[idx].tolist()
+        image_path = image_data[2]
         image_path = os.path.join(self.data_path, image_path)
-        label = self.data.loc[idx, 'original_label']
-        
-        # 去掉字符串中的括号，并使用空格分割成数字字符串列表
-        label = label.strip('[]').split()
-        label = [int(num) for num in label]
-        label = np.array(label)
-
+        label = (int(image_data[3]), int(image_data[4]))
         # 读取图像
         image = cv2.imread(image_path)
         image = image[:, :, [2, 1, 0]]  # from BGR to RGB

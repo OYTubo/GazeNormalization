@@ -185,7 +185,12 @@ class Trainer(object):
         file_name = []
 
         print('Testing on ', self.num_test, ' samples')
-        for i, (img_path, input_img, labels) in enumerate(self.test_loader):
+        for i, (img_path, input_img, labels, image_all) in enumerate(self.test_loader):
+            if image_all.err:
+                print(img_path,' none')
+                file_name.append(img_path)
+                
+                
             input_var = input_img.float().cuda()
             print(img_path)
             file_name.append(img_path)
@@ -203,7 +208,7 @@ class Trainer(object):
         tinydict = {'file_name': file_name, 'pred_gaze': pred_gaze_all, 'label': label}
         with open('./gaze_pred_new.pkl', 'wb') as fo:
             pickle.dump(tinydict,fo)
-        np.savetxt('results.txt', pred_gaze_all, delimiter=' ')
+        # np.savetxt('results.txt', pred_gaze_all, delimiter=' ')
 
     def save_checkpoint(self, state, add=None):
         """

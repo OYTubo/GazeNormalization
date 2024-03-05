@@ -1,10 +1,11 @@
 import sys
-sys.path.append("./FaceAlignment")
+sys.path.append("/home/hgh/GazeNormalization/FaceAlignment")
 import face_alignment
 from imutils import face_utils
 import cv2
 import dlib
 import numpy as np
+from ipdb import set_trace as st
 
 class AverageMeter(object):
     """
@@ -233,7 +234,7 @@ def xtrans(img, face_model, hr, ht, cam, w = 1920, h = 1080, gc = np.array([100,
     # two_eye_center = np.mean(Fc[:, 0:4], axis=1).reshape((3, 1))
     # mouth_center = np.mean(Fc[:, 4:6], axis=1).reshape((3, 1))
     face_center = np.mean(Fc,axis=1).reshape((3, 1))
-
+    
     # normalize image
     distance = np.linalg.norm(face_center)  # actual distance between and original camera
     z_scale = distance_norm / distance
@@ -272,7 +273,7 @@ def xtrans(img, face_model, hr, ht, cam, w = 1920, h = 1080, gc = np.array([100,
     gc_normalized = np.dot(R, gc_normalized) # 这里只追求旋转，所以没有与相机矩阵相乘
     gc_normalized = gc_normalized / np.linalg.norm(gc_normalized) #归一化
     gc_normalized = -gc_normalized
-    return img_warped, hr_norm, gc_normalized, R
+    return img_warped, hr_norm, gc_normalized, R, face_center
 
 
 def draw_gaze(image_in, gc_normalized, thickness=2, color=(0, 0, 255)):
@@ -292,7 +293,6 @@ def draw_gaze(image_in, gc_normalized, thickness=2, color=(0, 0, 255)):
     cv2.arrowedLine(image_out, tuple(np.round(pos).astype(int)),
                    tuple(np.round([pos[0] + dx, pos[1] + dy]).astype(int)), color,
                    thickness, cv2.LINE_AA, tipLength=0.2)
-
     return image_out
 
 def vector_to_gc(gv, pixel_scale, face_center = -600):
@@ -339,12 +339,12 @@ def GazeNormalization(image, camera_matrix, camera_distortion, gc, w, h, predict
             face = np.loadtxt('./modules/faceModelGeneric.txt')
             num_pts = face.shape[1]
             face_model = face.T.reshape(num_pts, 3)
-            warp_image,_,gcn,R = xtrans(image, face_model, hr, ht, camera_matrix, w, h, gc)
-            return warp_image, gcn, R, Ear
+            warp_image,_,gcn,R, face_center = xtrans(image, face_model, hr, ht, camera_matrix, w, h, gc)
+            return warp_image, gcn, R, Ear, face_center
         face_model_load = np.loadtxt('./modules/face_model.txt')  # Generic face model with 3D facial landmarks
         landmark_use = [20, 23, 26, 29, 15, 19]  # we use eye corners and nose conners
         face_model = face_model_load[landmark_use, :]
-        warp_image,_,gcn,R = xtrans(image, face_model, hr, ht, camera_matrix, w, h, gc)
+        warp_image,_,gcn,R, face_center = xtrans(image, face_model, hr, ht, camera_matrix, w, h, gc)
     elif(method == 'xgaze68'):
         hr, ht = xnorm_68(image, camera_matrix, camera_distortion, predictor, face_detector)
         face_model = np.loadtxt('./modules/face_model.txt')  # Generic face model with 3D facial landmarks
@@ -355,5 +355,5 @@ def GazeNormalization(image, camera_matrix, camera_distortion, gc, w, h, predict
         num_pts = face.shape[1]
         face_model = face.T.reshape(num_pts, 3)
         warp_image,_,gcn,R = xtrans(image, face_model, hr, ht, camera_matrix, w, h, gc)
-    return warp_image, gcn, R, Ear
+    return warp_image, gcn, R, Ear, face_center
 

@@ -12,11 +12,10 @@ import torch
 import matplotlib.pyplot as plt
 from model import gaze_network
 from torchvision import transforms
-import utils
 import pickle
+import gaze_normalize
 
-
-fileroot = '/home/hgh/hghData/gaze/eve/valpart/val01/step030_video_Wikimedia-Joy-and-Heron-Animated-CGI-Spot-by-Passion-Pictures/basler.h5'
+fileroot = '/home/hgh/hghData/gaze/eve/valpart/val01/step030_video_Wikimedia-Joy-and-Heron-Animated-CGI-Spot-by-Passion-Pictures/webcam_c.h5'
 
 file = h5py.File(fileroot, 'r')
 file.keys()
@@ -64,47 +63,19 @@ model.eval()
 # 数据预处理
 video_path = fileroot[:-3] + '.mp4'
 cap = cv2.VideoCapture(video_path)
-pred_norm = []
-pred = []
+res = []
 idx = 0
 ret = True
+camera_distortion = np.array([-0.16321888, 0.66783406, -0.00121854, -0.00303158, -1.02159927])
+preds = gaze_normalize.xmodel()
 while True:
     ret,image = cap.read()
     if ret == False:
         break
-    hr, ht = warp_norm.xnorm(image, camera_matrix)
-    if(hr.all() == 0 and ht.all() == 0):
-        warp_image = np.zeros((224,224,3), dtype=np.byte)
-        gcn = np.zeros((3,1))
-        R = np.zeros((3,3))
-        pred_gaze_np = [0,0]
-        pred_norm.append(pred_gaze_np)
-        pred.append(np.dot(np.linalg.inv(R),warp_norm.pitchyaw_to_vector(np.array([pred_gaze_np])).T))
-        continue
-    face_model_load = np.loadtxt('./modules/face_model.txt')  # Generic face model with 3D facial landmarks
-    landmark_use = [20, 23, 26, 29, 15, 19]  # we use eye corners and nose conners
-    face_model = face_model_load[landmark_use, :]
-    warp_image,_,gcn,R = warp_norm.xtrans(image, face_model, hr, ht, camera_matrix, pixel_scale,gc = np.array([100,100,0]))
-
-    # 模型推理
-    input_var = warp_image[:, :, [2, 1, 0]]  # from BGR to RGB
-    input_var = trans(input_var)
-    input_var = torch.autograd.Variable(input_var.float().cuda())
-    input_var = input_var.view(1, input_var.size(0), input_var.size(1), input_var.size(2))  # the input must be 4-dimension
-    pred_gaze = model(input_var)  # get the output gaze direction, this is 2D output as pitch and raw rotation
-    pred_gaze = pred_gaze[0] # here we assume there is only one face inside the image, then the first one is the prediction
-    pred_gaze_np = pred_gaze.cpu().data.numpy()  # convert the pytorch tensor to numpy array
-    print('Predict normalization gaze vector(pitch yaw):', pred_gaze_np)
-    pred_norm.append(pred_gaze_np)
-    pred.append(np.dot(np.linalg.inv(R),warp_norm.pitchyaw_to_vector(np.array([pred_gaze_np])).T))
-    print('Ground truth gaze vector:', gazen[0])
+    gaze_normalize_eve = gaze_normalize.GazeNormalize(image,camera_matrix,camera_distortion,preds)
+    gaze_normalize_eve.norm()
+    res.append(gaze_normalize_eve)
     idx += 1
 cap.release()
-pred = np.array(pred)
-pred_norm = np.array(pred_norm)
-print(pred_norm)
-label_norm = gazen
-print(label_norm)
-tinydict = {'pred_norm': pred_norm, 'pred': pred}
-with open('./eve_val01_pred.pkl', 'wb') as fo:
-    pickle.dump(tinydict,fo)
+with open('./result/eve_cam_c_all.pkl', 'wb') as fo:
+    pickle.dump(res,fo)
