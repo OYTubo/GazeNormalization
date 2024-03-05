@@ -7,6 +7,7 @@ import dlib
 import numpy as np
 from ipdb import set_trace as st
 import warp_norm
+import os
 
 def xmodel():
     predictor = dlib.shape_predictor('./modules/shape_predictor_68_face_landmarks.dat')
@@ -16,9 +17,10 @@ def xmodel():
     return preds
 
 class GazeNormalize():
-    def __init__(self, image, camera_matrix, camera_distortion, predictor):
+    def __init__(self, image_name, label, camera_matrix, camera_distortion, predictor):
         self.err = False
-        self.image = image
+        self.image_name = image_name
+        self.label = label
         self.camera_matrix = camera_matrix
         self.camera_distortion = camera_distortion
         if predictor is None:
@@ -30,12 +32,14 @@ class GazeNormalize():
             del state['predictor']
             return state
     
-    def norm(self):
+    def norm(self, dataset_path):
         # 1.face detection
         # detected_faces = self.predictor['dlib_detector'](cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB), 1) ## convert BGR image to RGB for dlib
         # if len(detected_faces) == 0:
         #    print('warning: no detected face by dlib')
-        preds = self.predictor['fa_detector'].get_landmarks(self.image)
+        self.image_path = os.path.join(dataset_path, self.image_name)
+        image = cv2.imread(self.image_path)
+        preds = self.predictor['fa_detector'].get_landmarks(image)
         if preds is None:
             print('warning: no detected face by fa')
             self.hr = np.zeros((1,3))
@@ -125,7 +129,8 @@ class GazeNormalize():
 
         self.R = np.c_[right, down, forward].T  # rotation matrix R
         self.W = np.dot(np.dot(cam_norm, S), np.dot(self.R, np.linalg.inv(self.camera_matrix)))  # transformation matrix
-        img_warped = cv2.warpPerspective(self.image, self.W, roiSize)  # image normalization
+        image = cv2.imread(self.image_path)
+        img_warped = cv2.warpPerspective(image, self.W, roiSize)  # image normalization
         return img_warped
     
         

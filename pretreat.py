@@ -140,12 +140,8 @@ os.makedirs(save_dir, exist_ok=True)
 res = []
 load_labels = []
 # 标签列表
-with open(os.path.join('/home/hgh/hghData/Datasets2', 'coordinate.txt'), 'r') as f:
-    reader = csv.reader(f, delimiter=',')
-    for row in reader:
-        load_labels.append(row)
-gaze_centers =[[int(i[-2]), int(i[-1])] for i in load_labels[:]]
-
+csv_file_path = '/home/hgh/hghData/Datasets2/coordinate.csv'
+df = pd.read_csv(csv_file_path, header=None)
 preds = gaze_normalize.xmodel()
 # 遍历图像文件夹
 for filename in sorted(os.listdir(image_folder_path), key=lambda x: int(os.path.splitext(x)[0])):
@@ -153,18 +149,22 @@ for filename in sorted(os.listdir(image_folder_path), key=lambda x: int(os.path.
         # 构建图像文件的完整路径
         image_path = os.path.join(image_folder_path, filename)
         print(image_path)
-        label = np.array(gaze_centers[int(''.join(filter(str.isdigit, filename))) - 1])
+        try:
+            row = df.iloc[int(os.path.splitext(filename)[0]) - 1].tolist()
+            label = (int(row[3]),int(row[4]))
+        except:
+            st()
         print(label)
+
         camera_matrix,camera_distortion = get_camera(image_path)
-        # 读取图像
-        image = cv2.imread(image_path)
-        gaze_normalize_new = gaze_normalize.GazeNormalize(image,camera_matrix,camera_distortion,preds)
-        save_path = os.path.join('/home/hgh/hghData/pre_3_4', f'{filename}')
+        gaze_normalize_new = gaze_normalize.GazeNormalize(filename,label,camera_matrix,camera_distortion,preds)
+        save_path = os.path.join('/home/hgh/hghData/pre_3_5', f'{filename}')
+        warp_image = gaze_normalize_new.norm(image_folder_path)
         if gaze_normalize_new.err == False:
-            cv2.imwrite(save_path,gaze_normalize_new.norm())
-        res.append(gaze_normalize_new)
+            cv2.imwrite(save_path, warp_image)
+            res.append(gaze_normalize_new)
         
-with open('./result/all_3_4.pkl', 'wb') as fo:
+with open('/home/hgh/hghData/all_3_5.pkl', 'wb') as fo:
     pickle.dump(res,fo)
 
 print('Preprocessing and saving complete.')

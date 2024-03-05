@@ -19,9 +19,8 @@ if __name__ == '__main__':
     config.use_gpu = True
     config.ckpt_dir = './ckpt'
     config.pre_trained_model_path = './ckpt/epoch_24_ckpt.pth.tar'
-    dataset = './result/all_3_4.pkl'
-    datapath = '/home/hgh/hghData/pre_3_4'
-    datalist = '/home/hgh/hghData/coordinate.csv'
-    test_data = data_loader.get_test_loader(datalist, dataset, datapath,batch_size=config.batch_size,num_workers=0)
+    datalist = '/home/hgh/hghData/all_3_5.pkl'
+    datapath = '/home/hgh/hghData/pre_3_5'
+    test_data = data_loader.get_test_loader(datalist, datapath, batch_size=config.batch_size,num_workers=0)
     xgaze = trainer.Trainer(config, test_data)
     xgaze.test()

@@ -179,35 +179,15 @@ class Trainer(object):
         self.model.eval()
         self.load_checkpoint(is_strict=False, input_file_path=self.pre_trained_model_path)
         pred_gaze_all = np.zeros((self.num_test, 2))
-        mean_error = []
-        save_index = 0
-        label = np.zeros((self.num_test, 2))
-        file_name = []
-
+        result = []
         print('Testing on ', self.num_test, ' samples')
-        for i, (img_path, input_img, labels, image_all) in enumerate(self.test_loader):
-            if image_all.err:
-                print(img_path,' none')
-                file_name.append(img_path)
-                
-                
-            input_var = input_img.float().cuda()
-            print(img_path)
-            file_name.append(img_path)
-            pred_gaze = self.model(input_var)
-            pred_gaze_all[save_index:save_index+self.batch_size, :] = pred_gaze.cpu().data.numpy()
-            label[save_index:save_index+self.batch_size, :] = labels
-            save_index += input_var.size(0)
-
-        if save_index != self.num_test:
-            print('the test samples save_index ', save_index, ' is not equal to the whole test set ', self.num_test)
-
-        print('Tested on : ', pred_gaze_all.shape[0], ' samples')
-        label = np.array(label)
-        print(label)
-        tinydict = {'file_name': file_name, 'pred_gaze': pred_gaze_all, 'label': label}
-        with open('./gaze_pred_new.pkl', 'wb') as fo:
-            pickle.dump(tinydict,fo)
+        for i, (image_paths, images) in enumerate(self.test_loader):
+            input_var = images.float().cuda()
+            pred_gazes = self.model(input_var).cpu().data.numpy()
+            for pred_gaze, image_path in zip(pred_gazes, image_paths):
+                result.append({'org_data':image_path, 'pred':pred_gaze})
+        with open('/home/hgh/hghData/gaze_pred_3_5.pkl', 'wb') as fo:
+            pickle.dump(result, fo)
         # np.savetxt('results.txt', pred_gaze_all, delimiter=' ')
 
     def save_checkpoint(self, state, add=None):
