@@ -199,7 +199,6 @@ def enorm(input, camera_matrix, camera_distortion = np.array([-0.16321888, 0.667
     lm = lm.astype(np.float32)
     lm = lm.reshape(num_pts, 1, 2)
     hr, ht = estimateHeadPose(lm, facePts, camera_matrix, camera_distortion)  
-    # Ear未完成，占位
     Ear = []
     for i in range(2):
         Ear.append((np.linalg.norm(landmarks[41+6*i]-landmarks[37+6*i],2) + np.linalg.norm(landmarks[40+6*i]-landmarks[38+6*i],2))/(2*np.linalg.norm(landmarks[36+6*i]-landmarks[39+6*i],2)))
