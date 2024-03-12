@@ -62,60 +62,62 @@ def get_condition_number(file_dict):
         return 18
     if (1351 <= file_dict <= 1400):
         return 19
-    if (1401 <= file_dict <= 1440):
-        return -1
-    if (1441 <= file_dict <= 1520):
+    if (1401 <= file_dict <= 1420):
         return 20
-    if (1521 <= file_dict <= 1600):
+    if (1421 <= file_dict <= 1440):
         return 21
-    if (1601 <= file_dict <= 1620):
+    if (1441 <= file_dict <= 1520):
         return 22
-    if (1621 <= file_dict <= 1640):
+    if (1521 <= file_dict <= 1600):
         return 23
-    if (1641 <= file_dict <= 1700):
+    if (1601 <= file_dict <= 1620):
         return 24
-    if (1701 <= file_dict <= 1760):
+    if (1621 <= file_dict <= 1640):
         return 25
-    if (1761 <= file_dict <= 1780):
+    if (1641 <= file_dict <= 1700):
         return 26
-    if (1781 <= file_dict <= 1800):
+    if (1701 <= file_dict <= 1760):
         return 27
-    if (1801 <= file_dict <= 1820):
+    if (1761 <= file_dict <= 1780):
         return 28
-    if (1821 <= file_dict <= 1840):
+    if (1781 <= file_dict <= 1800):
         return 29
-    if (1841 <= file_dict <= 1900):
+    if (1801 <= file_dict <= 1820):
         return 30
-    if (1901 <= file_dict <= 1960):
+    if (1821 <= file_dict <= 1840):
         return 31
-    if (1961 <= file_dict <= 1980):
+    if (1841 <= file_dict <= 1900):
         return 32
-    if (1981 <= file_dict <= 2000):
+    if (1901 <= file_dict <= 1960):
         return 33
-    if (2001 <= file_dict <= 2050):
+    if (1961 <= file_dict <= 1980):
         return 34
-    if (2051 <= file_dict <= 2100):
+    if (1981 <= file_dict <= 2000):
         return 35
-    if (2101 <= file_dict <= 2150):
+    if (2001 <= file_dict <= 2050):
         return 36
-    if (2151 <= file_dict <= 2200):
+    if (2051 <= file_dict <= 2100):
         return 37
-    if (2201 <= file_dict <= 2250):
+    if (2101 <= file_dict <= 2150):
         return 38
-    if (2251 <= file_dict <= 2300):
+    if (2151 <= file_dict <= 2200):
         return 39
-    if (2301 <= file_dict <= 2350):
+    if (2201 <= file_dict <= 2250):
         return 40
-    if (2351 <= file_dict <= 2400):
+    if (2251 <= file_dict <= 2300):
         return 41
-    if (2401 <= file_dict <= 2450):
+    if (2301 <= file_dict <= 2350):
         return 42
-    if (2451 <= file_dict <= 2500):
+    if (2351 <= file_dict <= 2400):
         return 43
-    if (2501 <= file_dict <= 2550):
+    if (2401 <= file_dict <= 2450):
         return 44
-    if (2551 <= file_dict <= 2600):
+    if (2451 <= file_dict <= 2500):
         return 45
+    if (2501 <= file_dict <= 2550):
+        return 46
+    if (2551 <= file_dict <= 2600):
+        return 47
 
 def get_camera(path):
     path = os.path.basename(path)
@@ -158,13 +160,13 @@ for filename in sorted(os.listdir(image_folder_path), key=lambda x: int(os.path.
 
         camera_matrix,camera_distortion = get_camera(image_path)
         gaze_normalize_new = gaze_normalize.GazeNormalize(filename,label,camera_matrix,camera_distortion,preds)
-        save_path = os.path.join('/home/hgh/hghData/pre_3_5', f'{filename}')
+        save_path = os.path.join('/home/hgh/hghData/pre_3_6', f'{filename}')
         warp_image = gaze_normalize_new.norm(image_folder_path)
         if gaze_normalize_new.err == False:
             cv2.imwrite(save_path, warp_image)
             res.append(gaze_normalize_new)
         
-with open('/home/hgh/hghData/all_3_5.pkl', 'wb') as fo:
+with open('/home/hgh/hghData/all_3_6.pkl', 'wb') as fo:
     pickle.dump(res,fo)
 
 print('Preprocessing and saving complete.')

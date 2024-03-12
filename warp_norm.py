@@ -359,3 +359,16 @@ def GazeNormalization(image, camera_matrix, camera_distortion, gc, w, h, predict
         warp_image,_,gcn,R = xtrans(image, face_model, hr, ht, camera_matrix, w, h, gc)
     return warp_image, gcn, R, Ear, face_center
 
+
+def hr_to_pitchyaw(hr):
+    # hr to Rmat
+    hr = hr.reshape((3,1))
+    R = cv2.Rodrigues(hr)[0]  # rotation matrix, [3,3]
+
+    pitch = np.arctan2(np.sqrt(np.square(R[1,1])+np.square(R[1,2])), R[2,3])
+    yaw = np.arctan2(-R[1,2],R[1,1])
+    roll = np.arcsin(-R[3,1])
+    return pitch, yaw, roll
+
+
+
