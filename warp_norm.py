@@ -6,6 +6,7 @@ import cv2
 import dlib
 import numpy as np
 from ipdb import set_trace as st
+from scipy.spatial.transform import Rotation
 
 class AverageMeter(object):
     """
@@ -361,14 +362,23 @@ def GazeNormalization(image, camera_matrix, camera_distortion, gc, w, h, predict
 
 
 def hr_to_pitchyaw(hr):
-    # hr to Rmat
-    hr = hr.reshape((3,1))
-    R = cv2.Rodrigues(hr)[0]  # rotation matrix, [3,3]
+    # 计算旋转角度和轴
+    theta = np.linalg.norm(hr)
+    axis = hr / theta if theta != 0 else np.array([1, 0, 0])
 
-    pitch = np.arctan2(np.sqrt(np.square(R[1,1])+np.square(R[1,2])), R[2,3])
-    yaw = np.arctan2(-R[1,2],R[1,1])
-    roll = np.arcsin(-R[3,1])
-    return pitch, yaw, roll
+    # 使用旋转轴和角度构造旋转矩阵
+    R = Rotation.from_rotvec(theta * axis).as_matrix()
 
+    euler = Rotation.from_matrix(R).as_euler('xyz', degrees=True)
+    
+    return euler
 
+def pitchyaw_to_hr(euler):
+    R = Rotation.from_euler('xyz', euler, degrees=True).as_matrix()
 
+    # 计算旋转矩阵的迹
+    trace = np.trace(R)
+    # 计算旋转向量
+    hr = Rotation.from_matrix(R).as_rotvec()
+
+    return hr

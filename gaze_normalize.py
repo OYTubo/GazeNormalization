@@ -144,20 +144,21 @@ class GazeNormalize():
         img_warped = cv2.warpPerspective(image, self.W, roiSize)  # image normalization
         return img_warped
     
-    def pred(self, model_path, img_warped):
+    def pred(self, model, img_warped):
         '''This method is used for real-time video gaze direction prediction'''
-        print('load gaze estimator')
-        model = gaze_network()
-        model.cuda()
-        pre_trained_model_path = model_path
-        if not os.path.isfile(pre_trained_model_path):
-            print('the pre-trained gaze estimation model does not exist.')
-            exit(0)
-        else:
-            print('load the pre-trained model: ', pre_trained_model_path)
-        ckpt = torch.load(pre_trained_model_path)
-        model.load_state_dict(ckpt['model_state'], strict=True)  # load the pre-trained model
-        model.eval()  # change it to the evaluation mode
+        if model == None:
+            print('load gaze estimator')
+            model = gaze_network()
+            model.cuda()
+            pre_trained_model_path = './ckpt/epoch_24_ckpt.pth.tar'
+            if not os.path.isfile(pre_trained_model_path):
+                print('the pre-trained gaze estimation model does not exist.')
+                exit(0)
+            else:
+                print('load the pre-trained model: ', pre_trained_model_path)
+            ckpt = torch.load(pre_trained_model_path)
+            model.load_state_dict(ckpt['model_state'], strict=True)  # load the pre-trained model
+            model.eval()  # change it to the evaluation mode
         input_var = img_warped[:, :, [2, 1, 0]]  # from BGR to RGB
         trans = transforms.Compose([
                 transforms.ToPILImage(),
@@ -205,3 +206,20 @@ class GazeNormalize():
         text_position = (image_out.shape[1] - text_size[0] - 10, image_out.shape[0] - 10)
         cv2.putText(image_out, text, text_position, font, font_scale, font_color, font_thickness)
         return image_out
+    
+    def vector_to_screen(self, pixel_scale):
+        gaze_vector = warp_norm.pitchyaw_to_vector(self.pred_gaze.reshape((1,2)))
+        org_pred = np.dot(np.linalg.inv(self.R), gaze_vector.T)
+        org_pred[1] = -org_pred[1]
+        org_pred = org_pred.reshape((1,3))
+        org_pred = org_pred[0]
+        self.org_pred = org_pred
+        face_center =  -self.face_center[2,0]
+        z = np.array([0,0, face_center])
+        theta = np.arcsin(np.linalg.norm(np.cross(org_pred,z))/(np.linalg.norm(org_pred)*np.linalg.norm(z)))
+        scale = np.linalg.norm(z)/(np.cos(theta)*np.linalg.norm(org_pred))
+        gp = scale * org_pred - z #单位为mm
+        gp = np.delete(gp, 2, axis=0)
+        gp = gp/pixel_scale
+        self.gaze_point = gp
+        return gp
