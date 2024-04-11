@@ -8,18 +8,22 @@ import warp_norm
 import pickle
 import gaze_normalize
 from ipdb import set_trace as st
-
+import torch
+from model import gaze_network
 
 cam_chen = '/home/hgh/hghData/Datasets/camChen.xml'  # this is camera calibration information file obtained with OpenCV
 fs_chen = cv2.FileStorage(cam_chen, cv2.FILE_STORAGE_READ)
 camera_matrix_chen = fs_chen.getNode('Camera_Matrix').mat() # camera calibration information is used for data normalization
 camera_distortion_chen = fs_chen.getNode('Distortion_Coefficients').mat()
+pixel_scale_chen = np.array([0.22, 0.235])
+org_chen = [650, 0] # 1300,720
 
 cam_tan = '/home/hgh/hghData/Datasets/camTan.xml'  # this is camera calibration information file obtained with OpenCV
 fs_tan = cv2.FileStorage(cam_tan, cv2.FILE_STORAGE_READ)
 camera_matrix_tan = fs_tan.getNode('Camera_Matrix').mat() # camera calibration information is used for data normalization
 camera_distortion_tan = fs_tan.getNode('Distortion_Coefficients').mat()
-
+pixel_scale_tan = np.array([0.202, 0.224])
+org_tan = [800, 0] # 1600,825 
 
 def get_condition_number(file_dict):
     if (1 <= file_dict <= 100):
@@ -125,27 +129,45 @@ def get_camera(path):
     number = get_condition_number(int(number))
     try:
         if(number % 2 == 0):
-            return camera_matrix_tan, camera_distortion_tan
+            return camera_matrix_tan, camera_distortion_tan, pixel_scale_tan, org_tan
         else:
-            return camera_matrix_chen, camera_distortion_chen
+            return camera_matrix_chen, camera_distortion_chen, pixel_scale_chen, org_chen
     except:
         st()
 
 # 图像文件所在的文件夹路径
 image_folder_path = '/home/hgh/hghData/Datasets2/Photo'
-
-# 预处理后的数据存储路径
-save_dir = '/home/hgh/hghData/Datasets2/preprocessed_images'
+save_dir = '/home/hgh/hghData/pre_3_25'
+csv_file_path = '/home/hgh/hghData/Datasets2/coordinate.csv'
+df = pd.read_csv(csv_file_path, header=None)
 os.makedirs(save_dir, exist_ok=True)
 
 # 数据集列表
 res = []
 load_labels = []
-# 标签列表
-csv_file_path = '/home/hgh/hghData/Datasets2/coordinate.csv'
-df = pd.read_csv(csv_file_path, header=None)
+# 加载模型
 preds = gaze_normalize.xmodel()
+
+face_model_load = np.loadtxt('./modules/face_model.txt')  # Generic face model with 3D facial landmarks
+landmark_use = [20, 23, 26, 29, 15, 19]  # we use eye corners and nose conners
+face_model = face_model_load[landmark_use, :]
+
+print('load gaze estimator')
+model_path = './ckpt/epoch_24_ckpt.pth.tar'
+model = gaze_network()
+model.cuda()
+pre_trained_model_path = model_path
+if not os.path.isfile(pre_trained_model_path):
+    print('the pre-trained gaze estimation model does not exist.')
+    exit(0)
+else:
+    print('load the pre-trained model: ', pre_trained_model_path)
+ckpt = torch.load(pre_trained_model_path)
+model.load_state_dict(ckpt['model_state'], strict=True)  # load the pre-trained model
+model.eval()  # change it to the evaluation mode
+
 # 遍历图像文件夹
+org_data = []
 for filename in sorted(os.listdir(image_folder_path), key=lambda x: int(os.path.splitext(x)[0])):
     if filename.endswith(".jpg"):
         # 构建图像文件的完整路径
@@ -158,15 +180,20 @@ for filename in sorted(os.listdir(image_folder_path), key=lambda x: int(os.path.
             st()
         print(label)
 
-        camera_matrix,camera_distortion = get_camera(image_path)
+        camera_matrix,camera_distortion,pixel_scale, org = get_camera(image_path)
         gaze_normalize_new = gaze_normalize.GazeNormalize(filename,label,camera_matrix,camera_distortion,preds)
-        save_path = os.path.join('/home/hgh/hghData/pre_3_6', f'{filename}')
+        save_path = os.path.join(save_dir, f'{filename}')
         warp_image = gaze_normalize_new.norm(image_folder_path)
         if gaze_normalize_new.err == False:
+            gaze_normalize_new.pred(model, warp_image)
+            gaze_normalize_new.vector_to_screen(pixel_scale)
+            gaze_normalize_new.gaze_point += org
             cv2.imwrite(save_path, warp_image)
             res.append(gaze_normalize_new)
-        
-with open('/home/hgh/hghData/all_3_6.pkl', 'wb') as fo:
+
+
+# 存储数据集        
+with open('/home/hgh/hghData/all_3_25.pkl', 'wb') as fo:
     pickle.dump(res,fo)
 
 print('Preprocessing and saving complete.')

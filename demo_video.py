@@ -15,8 +15,6 @@ from torchvision import transforms
 import pickle
 import gaze_normalize
 import os
-from ipdb import set_trace as st
-
 
 fileroot = '/home/hgh/hghData/gaze/eve/valpart/val01/step030_video_Wikimedia-Joy-and-Heron-Animated-CGI-Spot-by-Passion-Pictures/webcam_c.h5'
 
@@ -64,7 +62,7 @@ model.load_state_dict(ckpt['model_state'], strict=True)
 model.eval()
 
 # 数据预处理
-video_path = '/home/hgh/hghData/gaze/eve/valpart/val01/step030_video_Wikimedia-Joy-and-Heron-Animated-CGI-Spot-by-Passion-Pictures/webcam_c.mp4'
+video_path = '/home/hgh/hghData/test20240306.mkv'
 cap = cv2.VideoCapture(video_path)
 res = []
 images = []
@@ -76,7 +74,7 @@ while True:
     ret,image = cap.read()
     if ret == False:
         break
-    gaze_normalize_eve = gaze_normalize.GazeNormalize(idx, tobii[idx], camera_matrix,camera_distortion,preds,is_video=True,image = image)
+    gaze_normalize_eve = gaze_normalize.GazeNormalize(image,(0,0), camera_matrix,camera_distortion,preds,is_video=True)
     image_warp = gaze_normalize_eve.norm()
     if gaze_normalize_eve.err:
         text = 'EAR: No Detected Face'
@@ -84,28 +82,24 @@ while True:
         font_scale = 1
         font_thickness = 2
         font_color = (255, 255, 255)  # 白色
-        text_size = cv2.getTextSize(text, font, font_scale, font_thickness)[0]  
+        text_size = cv2.getTextSize(text, font, font_scale, font_thickness)[0]
         text_position = (image.shape[1] - text_size[0] - 10, image.shape[0] - 10)
         cv2.putText(image, text, text_position, font, font_scale, font_color, font_thickness)
         image_draw = image
     else:
-        gaze_normalize_eve.pred(model, image_warp)
-        # image_draw = gaze_normalize_eve.draw_gaze()
-        gaze_normalize_eve.vector_to_screen(pixel_scale)
-    res.append(gaze_normalize_eve)
-    # images.append(image_draw)
+        gaze_normalize_eve.pred('./ckpt/epoch_24_ckpt.pth.tar', image_warp)
+        image_draw = gaze_normalize_eve.draw_gaze()
+    # res.append(gaze_normalize_eve)
+    images.append(image_draw)
     idx += 1
 cap.release()
 
-with open('/home/hgh/hghData/eve_3_25_webcam_c.pkl', 'wb') as fo:
-    pickle.dump(res,fo)
+height, width, layers = images[0].shape
+video = cv2.VideoWriter('/home/hgh/hghData/output_3_6.mp4', cv2.VideoWriter_fourcc(*'mp4v'), 25, (width, height))
 
-# height, width, layers = images[0].shape
-# video = cv2.VideoWriter('/home/hgh/hghData/output_3_6.mp4', cv2.VideoWriter_fourcc(*'mp4v'), 25, (width, height))
-
-# # 将每张图片逐帧写入视频
-# for image in images:
-#     video.write(image)
-# video.release()
+# 将每张图片逐帧写入视频
+for image in images:
+    video.write(image)
+video.release()
 # with open('/home/hgh/hghData/eve_cam_c_3_5.pkl', 'wb') as fo:
     # pickle.dump(res,fo)
