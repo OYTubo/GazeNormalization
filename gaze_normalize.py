@@ -37,7 +37,25 @@ class GazeNormalize():
             state = self.__dict__.copy()
             del state['predictor']
             return state
-    
+
+    def pitchyaw_to_vector(self,pitchyaws):
+        r"""Convert given yaw (:math:`\theta`) and pitch (:math:`\phi`) angles to unit gaze vectors.
+
+        Args:
+            pitchyaws (:obj:`numpy.array`): yaw and pitch angles :math:`(n\times 2)` in radians.
+
+        Returns:
+            :obj:`numpy.array` of shape :math:`(n\times 3)` with 3D vectors per row.
+        """
+        n = pitchyaws.shape[0]
+        sin = np.sin(pitchyaws)
+        cos = np.cos(pitchyaws)
+        out = np.empty((n, 3))
+        out[:, 0] = np.multiply(cos[:, 0], sin[:, 1])
+        out[:, 1] = sin[:, 0]
+        out[:, 2] = np.multiply(cos[:, 0], cos[:, 1])
+        return out
+
     def norm(self, dataset_path = None):
         # 1.face detection
         # detected_faces = self.predictor['dlib_detector'](cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB), 1) ## convert BGR image to RGB for dlib
@@ -95,7 +113,7 @@ class GazeNormalize():
             Ear.append((np.linalg.norm(landmarks[41+6*i]-landmarks[37+6*i],2) + np.linalg.norm(landmarks[40+6*i]-landmarks[38+6*i],2))/(2*np.linalg.norm(landmarks[36+6*i]-landmarks[39+6*i],2)))
         self.Ear = np.mean(np.asarray(Ear))
 
-        print('ear:{}'.format(self.Ear))
+        # print('ear:{}'.format(self.Ear))
 
         # 2.Estimate Head Pose
         face_model_load = np.loadtxt('./modules/face_model.txt')  # Generic face model with 3D facial landmarks
@@ -109,10 +127,7 @@ class GazeNormalize():
         self.ht = ht.reshape((1,3))
 
         # 3.Normalize Image
-        self.warp_image, Fc, Fc_lip = self.xtrans(face_model,face_model_eye_corner)
-
-
-
+        self.warp_image, Fc, Fc_lip= self.xtrans(face_model,face_model_eye_corner)
 
 
         #Get lip distance and eye corner distance
@@ -131,10 +146,7 @@ class GazeNormalize():
         transfer_facter = distance_baseline / landmarks_eye_corner
         real_eyelip_distance = lip_distance * transfer_facter
 
-
-
-
-        return self.warp_image,real_eyelip_distance
+        return self.warp_image,real_eyelip_distance,self.Ear,self.R
     
     def calculate_face_area(self, face):
         min_x, max_x = np.min(face[0]), np.max(face[0])
@@ -196,15 +208,15 @@ class GazeNormalize():
     def pred(self, model_in, img_warped):
         '''This method is used for real-time video gaze direction prediction'''
         if model_in == None:
-            print('load gaze estimator')
+            # print('load gaze estimator')
             model = gaze_network()
             # model.cuda()
             pre_trained_model_path = './ckpt/epoch_24_ckpt.pth.tar'
             if not os.path.isfile(pre_trained_model_path):
                 print('the pre-trained gaze estimation model does not exist.')
                 exit(0)
-            else:
-                print('load the pre-trained model: ', pre_trained_model_path)
+            # else:
+            #     print('load the pre-trained model: ', pre_trained_model_path)
             ckpt = torch.load(pre_trained_model_path,map_location=torch.device('cpu'))
             model.load_state_dict(ckpt['model_state'], strict=True)  # load the pre-trained model
             model.eval()  # change it to the evaluation mode
@@ -231,7 +243,7 @@ class GazeNormalize():
         self.pred_gaze = pred_gaze[0].cpu().data.numpy() # here we assume there is only one face inside the image, then the first one is the prediction
         return self.pred_gaze
     
-    def draw_norm_gaze(self, thickness = 2, color=(0,0,255), add_hr = False):
+    def draw_norm_gaze(self, thickness = 2, color=(0,0,255), frameCount=0, blinkCount=0, blinkLonggest=0,alert=0,data_normalized=[],add_hr = False):
         '''Draw gaze angle on given image with a given eye positions.'''
         # 1.Reduction landmarks
         landmarks = self.landmarks_sub
@@ -314,6 +326,18 @@ class GazeNormalize():
             text_size = cv2.getTextSize(text, font, font_scale, font_thickness)[0]
             text_position = (image_out.shape[1] - text_size[0] - 10, image_out.shape[0] - 30)
             cv2.putText(image_out, text, text_position, font, font_scale, font_color, font_thickness)
+            text2 = 'blinkCount:{:2f}'.format(blinkCount)
+            text_position2 = (image_out.shape[1] - text_size[0] - 10, image_out.shape[0] - 30)
+            cv2.putText(image_out, text2, text_position2, font, font_scale, font_color, font_thickness)
+            text3 = 'frameCount:{:2f}'.format(frameCount)
+            text_position3 = (image_out.shape[1] - text_size[0] - 10, image_out.shape[0] - 40)
+            cv2.putText(image_out, text3, text_position3, font, font_scale, font_color, font_thickness)
+            text4 = 'blinkLonggest:{:2f}'.format(blinkLonggest)
+            text_position4 = (image_out.shape[1] - text_size[0] - 10, image_out.shape[0] - 50)
+            cv2.putText(image_out, text4, text_position4, font, font_scale, font_color, font_thickness)
+            text5 = 'alert:{}'.format(alert)
+            text_position5 = (image_out.shape[1] - text_size[0] - 10, image_out.shape[0] - 60)
+            cv2.putText(image_out, text5, text_position5, font, font_scale, font_color, font_thickness)
         return image_out
 
 
@@ -324,19 +348,64 @@ class GazeNormalize():
         org_pred = np.dot(np.linalg.inv(self.R), gaze_vector.T) 
         pitchyaw = warp_norm.vector_to_pitchyaw(org_pred.reshape((1,3)))[0]
 
-        # 2.Draw vector
+        # # 2.Draw vector
         image_out = self.image
-        length = 112
-        # pos = (int(w / 2.0), int(h / 2.0))
-        pos = tuple(np.mean(self.landmarks_sub.reshape((6,2)),axis=0).reshape((1,2)).tolist())[0]
-        if len(image_out.shape) == 2 or image_out.shape[2] == 1:  # to draw on the image, we need to convert to RGB
-            image_out = cv2.cvtColor(image_out, cv2.COLOR_GRAY2BGR)
-        dx = -length * np.sin(pitchyaw[1]) * np.cos(pitchyaw[0])
-        dy = -length * np.sin(pitchyaw[0])
-        cv2.arrowedLine(image_out, tuple(np.round(pos).astype(int)),
-                    tuple(np.round([pos[0] + dx, pos[1] + dy]).astype(int)), color,
-                    thickness, cv2.LINE_AA, tipLength=0.2)
-        
+        # length = 112
+        # # pos = (int(w / 2.0), int(h / 2.0))
+        # pos = tuple(np.mean(self.landmarks_sub.reshape((6,2)),axis=0).reshape((1,2)).tolist())[0]
+        # if len(image_out.shape) == 2 or image_out.shape[2] == 1:  # to draw on the image, we need to convert to RGB
+        #     image_out = cv2.cvtColor(image_out, cv2.COLOR_GRAY2BGR)
+        # dx = -length * np.sin(pitchyaw[1]) * np.cos(pitchyaw[0])
+        # dy = -length * np.sin(pitchyaw[0])
+        # cv2.arrowedLine(image_out, tuple(np.round(pos).astype(int)),
+        #             tuple(np.round([pos[0] + dx, pos[1] + dy]).astype(int)), color,
+        #             thickness, cv2.LINE_AA, tipLength=0.2)
+
+        r = 56
+        pos = int(224 - 56)
+
+        theta_circle = np.linspace(0, 2 * np.pi, 100)
+        x_circle = r * np.sin(theta_circle)
+        y_circle = r * np.cos(theta_circle)
+        theta_new = pitchyaw[1]
+        phi_new = pitchyaw[0]
+
+        # 根据phi值计算y和z坐标
+        x = -r * np.cos(phi_new) * np.sin(theta_new)
+        y = r * np.sin(phi_new)
+        z = r * np.cos(phi_new) * np.cos(theta_new)
+        # 根据真实坐标还原角度并投影
+        # 绘制竖圆
+        phi_1 = np.linspace(0, np.pi, 200)
+        proj_v = np.array([x,z])
+        x_axis = np.array([1, 0])
+        cos_theta_1 = np.dot(proj_v,x_axis) /(np.linalg.norm(proj_v) * np.linalg.norm(x_axis))
+        theta_1 = np.arccos(cos_theta_1)
+        x_1 = r * np.sin(phi_1) * np.cos(theta_1)
+        y_1 = r * np.cos(phi_1)
+
+        # 绘制横圆
+        phi_2 = np.linspace(0, np.pi, 200)
+        proj_y = np.array([y,z])
+        y_axis = np.array([1, 0])
+        cos_theta_2 = np.dot(proj_y,y_axis) /(np.linalg.norm(proj_y) * np.linalg.norm(y_axis))
+        theta_2 = np.arccos(cos_theta_2)
+        x_2 = r * np.cos(phi_2)
+        y_2 = r * np.sin(phi_2) * np.cos(theta_2)
+
+        # 绘制点和线
+        cv2.circle(image_out, (int(x+pos), int(-y+pos)), radius=5, color=(0, 0, 255), thickness=-1)  # 红色点
+        cv2.circle(image_out, (int(0+pos), int(0+pos)), radius=1, color=(255, 0, 0), thickness=-1)  # 蓝色点
+        cv2.line(image_out, (pos, pos), (int(x+pos), int(-y+pos)), color=(0, 0, 0), lineType = cv2.LINE_AA)  # 黑色虚线
+
+        # 绘制圆形投影（根据x_circle, y_circle的值绘制）
+        for i in range(len(x_circle)-1):
+            cv2.line(image_out, (int(x_circle[i]+pos), int(-y_circle[i]+pos)), (int(x_circle[i+1]+pos), int(-y_circle[i+1]+pos)), color=(0, 255, 0), thickness=1)
+        for i in range(len(x_1) - 1):
+            cv2.line(image_out, (int(x_1[i]+pos), int(-y_1[i]+pos)), (int(x_1[i + 1]+pos), int(-y_1[i + 1]+pos)), (0, 0, 255), 2)
+        for i in range(len(x_2) - 1):
+            cv2.line(image_out, (int(x_2[i]+pos), int(-y_2[i]+pos)), (int(x_2[i + 1]+pos), int(-y_2[i + 1]+pos)), (0, 0, 255), 2)
+
         # 3.Draw landmarks&EAR
         # for landmark in self.landmarks_sub.reshape((6,2)):
         #     cv2.circle(image_out, tuple(np.round(landmark).astype(int)), 1, (255,0,0), -1)
@@ -344,6 +413,7 @@ class GazeNormalize():
               cv2.circle(image_out, tuple(np.round(landmark).astype(int)), 1, (255,0,0), -1)
         # add EAR
         # text = 'EAR:{:2f}'.format(self.Ear)
+
         text = 'EAR:{:2f}'.format(self.Ear)
         font = cv2.FONT_HERSHEY_SIMPLEX
         font_scale = 0.4
@@ -366,7 +436,7 @@ class GazeNormalize():
         cv2.putText(image_out, text5, text_position5, font, font_scale, font_color, font_thickness)
         return image_out
     
-    def vector_to_screen(self, pixel_scale):
+    def vector_to_screen(self,pixel_scale=np.array([0.215,0.215])):
         # gaze_vector为屏幕坐标系注视向量
         gaze_vector = warp_norm.pitchyaw_to_vector(self.pred_gaze.reshape((1,2)))
         org_pred = np.dot(np.linalg.inv(self.R), gaze_vector.T)
@@ -387,7 +457,7 @@ class GazeNormalize():
         # theta = np.arcsin(np.linalg.norm(np.cross(org_pred,z))/(np.linalg.norm(org_pred)*np.linalg.norm(z)))
         # scale = np.linalg.norm(z)/(np.cos(theta)*np.linalg.norm(org_pred))
         # gp = scale * org_pred - z #单位为mm
-        print(gp)
+        # print(gp)
         gp = np.delete(gp, 2, axis=0)
         gp = gp/pixel_scale
         self.gaze_point = gp

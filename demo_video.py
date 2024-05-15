@@ -17,8 +17,9 @@ import gaze_normalize
 import os
 import math
 from collections import deque
+import time
 
-cam_drozy = r"D:\\DROZY_and_NTHU\\GazeNormalization-cpu_1\\testpart\\DROZY\\kinect-intrinsics.yaml"  #drozy的相机参数
+cam_drozy = "./testpart/kinect-intrinsics.yaml"  #drozy的相机参数
 fs_drozy = cv2.FileStorage(cam_drozy, cv2.FILE_STORAGE_READ)
 camera_matrix_drozy = fs_drozy.getNode('intrinsics').mat()
 k, p = fs_drozy.getNode('k').mat(), fs_drozy.getNode('p').mat()
@@ -39,8 +40,8 @@ fs_drozy.release()
 #
 camera_matrix=camera_matrix_drozy
 # camera_matrix = file['camera_matrix'][:]
-# # print('camera_matrix:')
-# # print(camera_matrix)
+print('camera_matrix:')
+print(camera_matrix)
 # camera_transformation = file['camera_transformation'][:]
 # # print('camera_transformation:')
 # # print(camera_transformation)
@@ -72,8 +73,8 @@ trans = transforms.Compose([
                              std=[0.229, 0.224, 0.225]),
     ])
 model = gaze_network()
-model.cuda()
-pre_trained_model_path = r"./ckpt/epoch_24_ckpt.pth.tar"
+# model.cuda()
+pre_trained_model_path = r"D:\DROZY_and_NTHU\GazeNormalization-cpu_1\ckpt\epoch_24_ckpt.pth.tar"
 ckpt = torch.load(pre_trained_model_path)
 model.load_state_dict(ckpt['model_state'], strict=True)
 model.eval()
@@ -83,7 +84,7 @@ def popHead(lst):
         lst.pop(0)
     return lst
 
-def returnAlert(blinkin60s,frameCountReturn,nextBegin):
+def returnAlert(blinkin60s,frameCountReturn,nextBegin,i):
     alert=0
     if frameCountReturn > 5:
         blinkin60s = popHead(blinkin60s)
@@ -156,7 +157,7 @@ def blinkCounter(data_normalized):
             flag=i
             frameCountReturn,nextBegin=frameBackandForth(data_normalized,flag)
             frameCount+=frameCountReturn
-            alert,blinkin60s=returnAlert(blinkin60s,frameCountReturn,nextBegin)
+            alert,blinkin60s=returnAlert(blinkin60s,frameCountReturn,nextBegin,i)
             i=nextBegin
             blinkCount+=1
             if frameCountReturn>blinkLonggest:
@@ -203,6 +204,11 @@ counter=0
 dataX=[]
 dataY=[]
 dataY_b=[]
+Ear=[]
+startTime=time.time()
+pitchAndYaw=np.empty((2,1))
+predVector=np.empty((3,1))
+gp=np.empty((2,1))
 while counter<300:
     dataX.append(counter)
     counter+=1
@@ -212,7 +218,20 @@ while counter<300:
     if ret == False:
         break
     gaze_normalize_eve = gaze_normalize.GazeNormalize(image,(0,0), camera_matrix,camera_distortion,preds,is_video=True,image=image) ##True to False
-    image_warp, real_eyelip_distance = gaze_normalize_eve.norm()
+    image_warp, real_eyelip_distance,earEachFrame,R = gaze_normalize_eve.norm()
+    ##get Predict normalization gaze vector(pitch yaw) and Predict Gaze Point
+    pred_gaze_np=gaze_normalize_eve.pred(model_in=None,img_warped=image_warp)
+
+    ##get pred vector
+    eachPredVector=gaze_normalize_eve.pitchyaw_to_vector(np.array([pred_gaze_np]))
+
+    ##get Normalization pred gaze point
+    eachGp=gaze_normalize_eve.vector_to_screen()
+
+    Ear.append(earEachFrame)
+    pitchAndYaw=np.append(pitchAndYaw,pred_gaze_np.reshape((2,1)),axis=1)
+    predVector=np.append(predVector,eachPredVector.reshape((3,1)),axis=1)
+    gp=np.append(gp,eachGp.reshape((2,1)),axis=1)
     dataY.append(real_eyelip_distance)
     dataY_b=baselineBn(dataY)
     data_normalized = []
@@ -233,8 +252,8 @@ while counter<300:
         gaze_normalize_eve.pred('./ckpt/epoch_24_ckpt.pth.tar', image_warp)
         frameCount, blinkCount, blinkLonggest,alert=blinkCounter(data_normalized)
         image_draw = gaze_normalize_eve.draw_gaze(frameCount=frameCount, blinkCount=blinkCount, blinkLonggest=blinkLonggest,alert=alert,data_normalized=data_normalized)
-        print(f'{data_normalized}')
-        # image_draw=gaze_normalize_eve.draw_norm_gaze()
+        # print(f'{data_normalized}')
+        #image_draw=gaze_normalize_eve.draw_norm_gaze(frameCount=frameCount, blinkCount=blinkCount, blinkLonggest=blinkLonggest,alert=alert,data_normalized=data_normalized)
     # res.append(gaze_normalize_eve)
     images.append(image_draw)
     idx += 1
@@ -244,10 +263,22 @@ height, width, layers = images[0].shape
 # video = cv2.VideoWriter('/home/hgh/hghData/output_3_6.mp4', cv2.VideoWriter_fourcc(*'mp4v'), 25, (width, height))
 video = cv2.VideoWriter("./test/output_3-1.mp4", cv2.VideoWriter_fourcc(*'mp4v'), 25, (width, height))
 
-
 # 将每张图片逐帧写入视频
 for image in images:
     video.write(image)
 video.release()
 # with open('/home/hgh/hghData/eve_cam_c_3_5.pkl', 'wb') as fo:
     # pickle.dump(res,fo)
+endTime=time.time()
+elapsedTime=endTime-startTime
+
+pitchAndYaw=np.delete(pitchAndYaw,0,axis=1)
+predVector=np.delete(predVector,0,axis=1)
+gp=np.delete(gp,0,axis=1)
+
+print("video saved in ./test/output_3-1.mp4\n")
+print(f'Ear:\n(眼睛纵横比  每帧一个  [0,1])\n{Ear}')
+print(f'Elapsed time:\n(运行时间  单位：秒)\n{elapsedTime} seconds')
+print('Predict normalization gaze vector(pitch yaw):\n(预测的规范化注视向量（俯仰角和偏航角）  每帧一列（二维向量）  [0,pi],[0,2pi])\n', pitchAndYaw)
+print('pred vector:\n(预测的注视向量  每帧一列（三维单位向量）  ||e|| = 1)\n', predVector)
+print('Normalization pred gaze point:\n(预测的规范化注视点  每帧一列  随pixel_scale变化)\n',gp)
