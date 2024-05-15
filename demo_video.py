@@ -18,7 +18,7 @@ import os
 import math
 from collections import deque
 
-cam_drozy = r"D:\DROZY_and_NTHU\GazeNormalization-cpu_1\testpart\DROZY\kinect-intrinsics.yaml"  #drozy的相机参数
+cam_drozy = r"D:\\DROZY_and_NTHU\\GazeNormalization-cpu_1\\testpart\\DROZY\\kinect-intrinsics.yaml"  #drozy的相机参数
 fs_drozy = cv2.FileStorage(cam_drozy, cv2.FILE_STORAGE_READ)
 camera_matrix_drozy = fs_drozy.getNode('intrinsics').mat()
 k, p = fs_drozy.getNode('k').mat(), fs_drozy.getNode('p').mat()
@@ -73,7 +73,7 @@ trans = transforms.Compose([
     ])
 model = gaze_network()
 model.cuda()
-pre_trained_model_path = r"D:\DROZY_and_NTHU\GazeNormalization-cpu_1\ckpt\epoch_24_ckpt.pth.tar"
+pre_trained_model_path = r"./ckpt/epoch_24_ckpt.pth.tar"
 ckpt = torch.load(pre_trained_model_path)
 model.load_state_dict(ckpt['model_state'], strict=True)
 model.eval()
