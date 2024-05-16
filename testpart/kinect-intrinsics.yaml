@@ -1,0 +1,17 @@
+%YAML:1.0
+intrinsics: !!opencv-matrix
+   rows: 3
+   cols: 3
+   dt: f
+   data: [ 3.65789398e+02, 0., 2.61904999e+02, 0., 3.65789398e+02,
+       2.05422104e+02, 0., 0., 1. ]
+k: !!opencv-matrix
+   rows: 3
+   cols: 1
+   dt: f
+   data: [ 9.26880687e-02, -2.71639109e-01, 9.28321406e-02 ]
+p: !!opencv-matrix
+   rows: 2
+   cols: 1
+   dt: f
+   data: [ 0., 0. ]
